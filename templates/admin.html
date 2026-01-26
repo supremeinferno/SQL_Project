@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<a href="/logout">Logout</a>
+<hr>
+
+<head>
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<h2>Admin Dashboard</h2>
+
+<h3>Register Student</h3>
+
+<form method="POST" action="/add-student">
+    <input name="name" placeholder="Student Name" required>
+    <input name="roll" placeholder="Roll Number" required>
+    <input name="room" placeholder="Room Number" required>
+    <input name="username" placeholder="Username" required>
+    <input name="password" placeholder="Password" required>
+    <button type="submit">Add Student</button>
+</form>
+<hr>
+
+<h3>Complaints</h3>
+
+<table border="1" cellpadding="5">
+
+
+    <tr>
+        <th>ID</th>
+        <th>Student</th>
+        <th>Roll No</th>
+        <th>Room</th>
+        <th>Title</th>
+        <th>Description</th>
+        <th>Status</th>
+        <th>Update Status</th>
+        <th>Delete</th>
+
+
+    </tr>
+
+    {{range .Complaints}}
+
+
+
+    <tr>
+        <td>{{.ID}}</td>
+        <td>{{.StudentName}}</td>
+        <td>{{.RollNo}}</td>
+        <td>{{.RoomNo}}</td>
+        <td>{{.Title}}</td>
+        <td>{{.Description}}</td>
+        <td>{{.Status}}</td>
+        <td>
+            <form method="POST" action="/update-status">
+                <input type="hidden" name="id" value="{{.ID}}">
+
+                <select name="status">
+                    <option>Pending</option>
+                    <option>In Progress</option>
+                    <option>Resolved</option>
+                </select>
+
+                <button type="submit">Update</button>
+            </form>
+        </td>
+        <td>
+            <form method="POST" action="/delete-complaint"
+                  onsubmit="return confirm('Are you sure you want to delete this complaint?');">
+                <input type="hidden" name="id" value="{{.ID}}">
+                <button type="submit">Delete</button>
+            </form>
+        </td>
+
+
+    </tr>
+    {{else}}
+    <tr>
+        <td colspan="7">No complaints found</td>
+    </tr>
+    {{end}}
+</table>
+<hr>
+<h4>Search Student by Roll Number</h4>
+
+<form method="GET" action="/admin">
+    <input name="roll_search" placeholder="Enter Roll Number">
+    <button type="submit">Search</button>
+</form>
+
+<hr>
+
+<h3>All Students</h3>
+<a href="/export-students">Export Students as CSV</a>
+
+<table border="1" cellpadding="5">
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Roll No</th>
+        <th>Room</th>
+        <th>Username</th>
+        <th>Password</th>
+        <th>Delete</th>
+
+    </tr>
+
+    {{range .Students}}
+    <tr>
+        <td>{{.ID}}</td>
+        <td>{{.Name}}</td>
+        <td>{{.RollNo}}</td>
+        <td>{{.RoomNo}}</td>
+        <td>{{.Username}}</td>
+        <td>{{.Password}}</td>
+        <td>
+            <form method="POST" action="/delete-student"
+                  onsubmit="return confirm('Delete student and all complaints?');">
+                <input type="hidden" name="id" value="{{.ID}}">
+                <button type="submit">Delete</button>
+            </form>
+        </td>
+
+    </tr>
+    {{else}}
+    <tr>
+        <td colspan="6">No students found</td>
+    </tr>
+    {{end}}
+</table>
+
+</body>
+</html>
