@@ -23,5 +23,5 @@ Complaint Management
 
 ### Conclusion
 
-This project helps in understanding the practical use of SQL concepts such as tables, primary keys, foreign keys, and joins. It provides a simple and effective solution for managing hostel-related information.
+This project helps in understanding the practical use of SQL concepts such as tables, primary keys, foreign keys,,and joins. It provides a simple and effective solution for managing hostel-related information.
 
