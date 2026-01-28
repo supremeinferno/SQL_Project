@@ -8,7 +8,7 @@ The Hostel Management System is a basic SQL-based database project designed to m
 To maintain records of hostel students </br>
 To manage room allocation and room details </br>
 To track and manage student complaints </br>
-To reduce manual work using a database system 
+To reduce manual work using a database system </br>
 
 ### Technologies Used
 
