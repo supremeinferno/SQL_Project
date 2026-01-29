@@ -28,6 +28,6 @@ func main() {
 	http.HandleFunc("/delete-student", deleteStudent)
 	http.HandleFunc("/export-students", exportStudentsCSV)
 
-	log.Println("Server running on http://localhost:8070")
+	log.Println("Server running on http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
 }
