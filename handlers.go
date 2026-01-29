@@ -8,6 +8,12 @@ import (
 	"strconv"
 )
 
+type PageData struct {
+	Title string
+	Data  interface{}
+}
+
+
 type ComplaintView struct {
 	ID          int
 	StudentName string
@@ -152,10 +158,6 @@ func adminDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err != nil {
-		w.Write([]byte("Error loading students"))
-		return
-	}
 	defer sRows.Close()
 
 	var students []StudentView
@@ -180,8 +182,19 @@ func adminDashboard(w http.ResponseWriter, r *http.Request) {
 		Students:   students,
 	}
 
-	tmpl := template.Must(template.ParseFiles("templates/admin.html"))
-	tmpl.Execute(w, data)
+	// tmpl := template.Must(template.ParseFiles("templates/admin.html"))
+	// tmpl.Execute(w, data)
+
+	tmpl := template.Must(template.ParseFiles(
+	"templates/base.html",
+	"templates/admin.html",
+	))
+
+	tmpl.Execute(w, PageData{
+	Title: "Admin Dashboard",
+	Data:  data,
+	})
+
 }
 
 func studentDashboard(w http.ResponseWriter, r *http.Request) {
@@ -225,8 +238,18 @@ func studentDashboard(w http.ResponseWriter, r *http.Request) {
 		complaints = append(complaints, c)
 	}
 
-	tmpl := template.Must(template.ParseFiles("templates/student.html"))
-	tmpl.Execute(w, complaints)
+	// tmpl := template.Must(template.ParseFiles("templates/student.html"))
+	// tmpl.Execute(w, complaints)
+
+	tmpl := template.Must(template.ParseFiles(
+	"templates/base.html",
+	"templates/student.html",
+	))
+
+	tmpl.Execute(w, PageData{
+	Title: "Student Dashboard",
+	Data:  complaints,
+	})
 }
 
 func addStudent(w http.ResponseWriter, r *http.Request) {

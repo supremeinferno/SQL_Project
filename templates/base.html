@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{.Title}}</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/style.css" rel="stylesheet">
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+        <span class="navbar-brand">Hostel Management System</span>
+        <a href="/logout" class="btn btn-sm btn-danger">Logout</a>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    {{template "content" .Data}}
+</div>
+
+</body>
+</html>
