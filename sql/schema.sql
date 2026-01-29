@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS admins (
 );
 
 INSERT INTO admins (username, password)
-VALUES ('admin', 'admin123');
+VALUES ('admin', '123');
 
 CREATE TABLE IF NOT EXISTS students (
                                         id INTEGER PRIMARY KEY AUTOINCREMENT,
