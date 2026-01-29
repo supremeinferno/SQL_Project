@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
 <head>
     <title>Hostel Login</title>
@@ -22,3 +22,56 @@
 
 </body>
 </html>
+
+ -->
+
+
+
+
+
+
+
+ 
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hostel Login</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/style.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="container d-flex justify-content-center align-items-center full-height">
+    <div class="card login-card p-4 shadow" style="width:360px">
+        <h4 class="text-center mb-1">Hostel Management Portal</h4>
+        <p class="text-center text-muted mb-3">Login to continue</p>
+
+        <form method="POST" action="/login">
+            <input class="form-control mb-3"
+                   name="username"
+                   placeholder="Username"
+                   required>
+
+            <input type="password"
+                   class="form-control mb-3"
+                   name="password"
+                   placeholder="Password"
+                   required>
+
+            <select class="form-select mb-4" name="role">
+                <option value="admin">Admin</option>
+                <option value="student">Student</option>
+            </select>
+
+            <button class="btn btn-primary w-100">Login</button>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>
+
+

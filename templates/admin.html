@@ -1,136 +1,205 @@
-<!DOCTYPE html>
-<html>
-<a href="/logout">Logout</a>
-<hr>
+{{define "content"}}
 
-<head>
-    <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
+<h3 class="mb-4">Admin Dashboard</h3>
 
-<h2>Admin Dashboard</h2>
+<!-- REGISTER STUDENT -->
+<div class="card p-4 mb-4">
+    <h5 class="mb-3">Register Student</h5>
 
-<h3>Register Student</h3>
+    <form method="POST" action="/add-student" class="row g-3">
 
-<form method="POST" action="/add-student">
-    <input name="name" placeholder="Student Name" required>
-    <input name="roll" placeholder="Roll Number" required>
-    <input name="room" placeholder="Room Number" required>
-    <input name="username" placeholder="Username" required>
-    <input name="password" placeholder="Password" required>
-    <button type="submit">Add Student</button>
-</form>
-<hr>
+        <!-- Student Name (FULL WIDTH) -->
+        <div class="col-md-12">
+            <input
+                type="text"
+                class="form-control"
+                name="name"
+                placeholder="Student Name"
+                required
+            >
+        </div>
 
-<h3>Complaints</h3>
+        <!-- Roll Number -->
+        <div class="col-md-6">
+            <input
+                type="text"
+                class="form-control"
+                name="roll"
+                placeholder="Roll Number"
+                required
+            >
+        </div>
 
-<table border="1" cellpadding="5">
+        <!-- Room Number -->
+        <div class="col-md-6">
+            <input
+                type="text"
+                class="form-control"
+                name="room"
+                placeholder="Room Number"
+                required
+            >
+        </div>
 
+        <!-- Username -->
+        <div class="col-md-6">
+            <input
+                type="text"
+                class="form-control"
+                name="username"
+                placeholder="Username"
+                required
+            >
+        </div>
 
-    <tr>
-        <th>ID</th>
-        <th>Student</th>
-        <th>Roll No</th>
-        <th>Room</th>
-        <th>Title</th>
-        <th>Description</th>
-        <th>Status</th>
-        <th>Update Status</th>
-        <th>Delete</th>
+        <!-- Password -->
+        <div class="col-md-6">
+            <input
+                type="password"
+                class="form-control"
+                name="password"
+                placeholder="Password"
+                required
+            >
+        </div>
 
+        <!-- Button -->
+        <div class="col-12">
+            <button class="btn btn-primary">
+                Add Student
+            </button>
+        </div>
 
-    </tr>
-
-    {{range .Complaints}}
-
-
-
-    <tr>
-        <td>{{.ID}}</td>
-        <td>{{.StudentName}}</td>
-        <td>{{.RollNo}}</td>
-        <td>{{.RoomNo}}</td>
-        <td>{{.Title}}</td>
-        <td>{{.Description}}</td>
-        <td>{{.Status}}</td>
-        <td>
-            <form method="POST" action="/update-status">
-                <input type="hidden" name="id" value="{{.ID}}">
-
-                <select name="status">
-                    <option>Pending</option>
-                    <option>In Progress</option>
-                    <option>Resolved</option>
-                </select>
-
-                <button type="submit">Update</button>
-            </form>
-        </td>
-        <td>
-            <form method="POST" action="/delete-complaint"
-                  onsubmit="return confirm('Are you sure you want to delete this complaint?');">
-                <input type="hidden" name="id" value="{{.ID}}">
-                <button type="submit">Delete</button>
-            </form>
-        </td>
+    </form>
+</div>
 
 
-    </tr>
-    {{else}}
-    <tr>
-        <td colspan="7">No complaints found</td>
-    </tr>
-    {{end}}
-</table>
-<hr>
-<h4>Search Student by Roll Number</h4>
+<!-- COMPLAINTS -->
+<div class="card p-4 mb-4">
+    <h5 class="mb-3">Complaints</h5>
 
-<form method="GET" action="/admin">
-    <input name="roll_search" placeholder="Enter Roll Number">
-    <button type="submit">Search</button>
-</form>
+    <table class="table table-bordered table-hover">
+        <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Student</th>
+            <th>Roll</th>
+            <th>Room</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Update</th>
+            <th>Delete</th>
+        </tr>
+        </thead>
 
-<hr>
+        <tbody>
+        {{range .Complaints}}
+        <tr>
+            <td>{{.ID}}</td>
+            <td>{{.StudentName}}</td>
+            <td>{{.RollNo}}</td>
+            <td>{{.RoomNo}}</td>
+            <td>{{.Title}}</td>
+            <td>{{.Description}}</td>
+            <td>
+                <span class="badge {{if eq .Status "Resolved"}}bg-success{{else}}bg-warning text-dark{{end}}">
+                    {{.Status}}
+                </span>
+            </td>
+            <td>
+                <form method="POST" action="/update-status" class="d-flex gap-1">
+                    <input type="hidden" name="id" value="{{.ID}}">
+                    <select name="status" class="form-select form-select-sm">
+                        <option>Pending</option>
+                        <option>In Progress</option>
+                        <option>Resolved</option>
+                    </select>
+                    <button class="btn btn-sm btn-primary">Update</button>
+                </form>
+            </td>
+            <td>
+                <form method="POST" action="/delete-complaint"
+                      onsubmit="return confirm('Delete this complaint?')">
+                    <input type="hidden" name="id" value="{{.ID}}">
+                    <button class="btn btn-sm btn-danger">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {{else}}
+        <tr>
+            <td colspan="9" class="text-center text-muted">
+                No complaints found
+            </td>
+        </tr>
+        {{end}}
+        </tbody>
+    </table>
+</div>
 
-<h3>All Students</h3>
-<a href="/export-students">Export Students as CSV</a>
+<!-- SEARCH STUDENT -->
+<div class="mt-2">
+    <a href="/admin" class="btn btn-outline-secondary btn-sm">
+        View All Students
+    </a>
+</div>
 
-<table border="1" cellpadding="5">
-    <tr>
-        <th>ID</th>
-        <th>Name</th>
-        <th>Roll No</th>
-        <th>Room</th>
-        <th>Username</th>
-        <th>Password</th>
-        <th>Delete</th>
+<div class="card p-4 mb-4">
+    <h5 class="mb-3">Search Student by Roll Number</h5>
+    <form method="GET" action="/admin" class="d-flex gap-2">
+        <input class="form-control" name="roll_search" placeholder="Enter Roll Number">
+        <button class="btn btn-secondary">Search</button>
+    </form>
+</div>
 
-    </tr>
+<!-- ALL STUDENTS -->
+<div class="card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5>All Students</h5>
+        <a href="/export-students" class="btn btn-success btn-sm">
+            Export CSV
+        </a>
+    </div>
 
-    {{range .Students}}
-    <tr>
-        <td>{{.ID}}</td>
-        <td>{{.Name}}</td>
-        <td>{{.RollNo}}</td>
-        <td>{{.RoomNo}}</td>
-        <td>{{.Username}}</td>
-        <td>{{.Password}}</td>
-        <td>
-            <form method="POST" action="/delete-student"
-                  onsubmit="return confirm('Delete student and all complaints?');">
-                <input type="hidden" name="id" value="{{.ID}}">
-                <button type="submit">Delete</button>
-            </form>
-        </td>
+    <table class="table table-bordered table-hover">
+        <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Roll</th>
+            <th>Room</th>
+            <th>Username</th>
+            <th>Password</th>
+            <th>Delete</th>
+        </tr>
+        </thead>
 
-    </tr>
-    {{else}}
-    <tr>
-        <td colspan="6">No students found</td>
-    </tr>
-    {{end}}
-</table>
+        <tbody>
+        {{range .Students}}
+        <tr>
+            <td>{{.ID}}</td>
+            <td>{{.Name}}</td>
+            <td>{{.RollNo}}</td>
+            <td>{{.RoomNo}}</td>
+            <td>{{.Username}}</td>
+            <td>{{.Password}}</td>
+            <td>
+                <form method="POST" action="/delete-student"
+                      onsubmit="return confirm('Delete student and complaints?')">
+                    <input type="hidden" name="id" value="{{.ID}}">
+                    <button class="btn btn-sm btn-danger">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {{else}}
+        <tr>
+            <td colspan="7" class="text-center text-muted">
+                No students found
+            </td>
+        </tr>
+        {{end}}
+        </tbody>
+    </table>
+</div>
 
-</body>
-</html>
+{{end}}

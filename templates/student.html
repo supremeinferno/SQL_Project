@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
 <a href="/logout">Logout</a>
 <hr>
@@ -44,4 +44,81 @@
 
 
 </body>
-</html>
+</html> -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+{{define "content"}}
+
+<h3 class="mb-4">Student Dashboard</h3>
+
+<!-- SUBMIT COMPLAINT -->
+<div class="card p-4 mb-4">
+    <h5 class="mb-3">Submit Complaint</h5>
+
+    <form method="POST" action="/add-complaint">
+        <div class="mb-3">
+            <input
+                type="text"
+                name="title"
+                class="form-control"
+                placeholder="Complaint Title"
+                required
+            >
+        </div>
+
+        <div class="mb-3">
+            <textarea
+                name="description"
+                class="form-control"
+                rows="3"
+                placeholder="Describe your issue"
+                required
+            ></textarea>
+        </div>
+
+        <button class="btn btn-primary">
+            Submit Complaint
+        </button>
+    </form>
+</div>
+
+<!-- MY COMPLAINTS -->
+<div class="card p-4">
+    <h5 class="mb-3">My Complaints</h5>
+
+    {{range .}}
+    <div class="card mb-3 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0 fw-bold">{{.Title}}</h6>
+
+                {{if eq .Status "Resolved"}}
+                    <span class="badge bg-success">Resolved</span>
+                {{else}}
+                    <span class="badge bg-warning text-dark">Pending</span>
+                {{end}}
+            </div>
+
+            <p class="text-muted mb-0">
+                {{.Description}}
+            </p>
+        </div>
+    </div>
+    {{else}}
+        <p class="text-muted">No complaints submitted yet.</p>
+    {{end}}
+
+</div>
+
+{{end}}
