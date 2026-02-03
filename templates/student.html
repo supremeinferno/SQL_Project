@@ -101,18 +101,32 @@
     <div class="card mb-3 shadow-sm">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="mb-0 fw-bold">{{.Title}}</h6>
+                <div>
+                    <h6 class="mb-0 fw-bold">{{.Title}}</h6>
+                    <p class="text-muted mb-0">
+                        {{.Description}}
+                    </p>
+                </div>
 
-                {{if eq .Status "Resolved"}}
-                    <span class="badge bg-success">Resolved</span>
-                {{else}}
-                    <span class="badge bg-warning text-dark">Pending</span>
-                {{end}}
+                <div class="text-end">
+                    {{if eq .Status "Resolved"}}
+                        <span class="badge bg-success d-block mb-2">Resolved</span>
+                    {{else}}
+                        <span class="badge bg-warning text-dark d-block mb-2">Pending</span>
+                    {{end}}
+
+                    <form
+                        method="POST"
+                        action="/student/delete-complaint"
+                        onsubmit="return confirm('Are you sure you want to delete this complaint?');"
+                    >
+                        <input type="hidden" name="id" value="{{.ID}}">
+                        <button class="btn btn-sm btn-outline-danger" type="submit">
+                            Delete
+                        </button>
+                    </form>
+                </div>
             </div>
-
-            <p class="text-muted mb-0">
-                {{.Description}}
-            </p>
         </div>
     </div>
     {{else}}

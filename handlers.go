@@ -13,7 +13,6 @@ type PageData struct {
 	Data  interface{}
 }
 
-
 type ComplaintView struct {
 	ID          int
 	StudentName string
@@ -186,13 +185,13 @@ func adminDashboard(w http.ResponseWriter, r *http.Request) {
 	// tmpl.Execute(w, data)
 
 	tmpl := template.Must(template.ParseFiles(
-	"templates/base.html",
-	"templates/admin.html",
+		"templates/base.html",
+		"templates/admin.html",
 	))
 
 	tmpl.Execute(w, PageData{
-	Title: "Admin Dashboard",
-	Data:  data,
+		Title: "Admin Dashboard",
+		Data:  data,
 	})
 
 }
@@ -242,13 +241,13 @@ func studentDashboard(w http.ResponseWriter, r *http.Request) {
 	// tmpl.Execute(w, complaints)
 
 	tmpl := template.Must(template.ParseFiles(
-	"templates/base.html",
-	"templates/student.html",
+		"templates/base.html",
+		"templates/student.html",
 	))
 
 	tmpl.Execute(w, PageData{
-	Title: "Student Dashboard",
-	Data:  complaints,
+		Title: "Student Dashboard",
+		Data:  complaints,
 	})
 }
 
@@ -301,6 +300,39 @@ func addComplaint(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		w.Write([]byte("Error submitting complaint"))
+		return
+	}
+
+	http.Redirect(w, r, "/student", http.StatusSeeOther)
+}
+func deleteStudentComplaint(w http.ResponseWriter, r *http.Request) {
+	// Only allow POST requests
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/student", http.StatusSeeOther)
+		return
+	}
+
+	// Ensure a student is logged in
+	cookie, err := r.Cookie("student_id")
+	if err != nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	complaintID := r.FormValue("id")
+	if complaintID == "" {
+		http.Redirect(w, r, "/student", http.StatusSeeOther)
+		return
+	}
+
+	// Delete complaint only if it belongs to the logged-in student
+	_, err = db.Exec(
+		"DELETE FROM complaints WHERE id = ? AND student_id = ?",
+		complaintID,
+		cookie.Value,
+	)
+	if err != nil {
+		w.Write([]byte("Error deleting complaint"))
 		return
 	}
 

@@ -22,6 +22,7 @@ func main() {
 	http.HandleFunc("/student", studentDashboard)
 	http.HandleFunc("/add-student", addStudent)
 	http.HandleFunc("/add-complaint", addComplaint)
+	http.HandleFunc("/student/delete-complaint", deleteStudentComplaint)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/update-status", updateComplaintStatus)
 	http.HandleFunc("/delete-complaint", deleteComplaint)
