@@ -338,6 +338,38 @@ func deleteStudentComplaint(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/student", http.StatusSeeOther)
 }
+
+func updateStudentComplaintStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/student", http.StatusSeeOther)
+		return
+	}
+
+	cookie, err := r.Cookie("student_id")
+	if err != nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	complaintID := r.FormValue("id")
+	status := r.FormValue("status")
+	if complaintID == "" || status == "" {
+		http.Redirect(w, r, "/student", http.StatusSeeOther)
+		return
+	}
+
+	_, err = db.Exec(
+		"UPDATE complaints SET status = ? WHERE id = ? AND student_id = ?",
+		status, complaintID, cookie.Value,
+	)
+	if err != nil {
+		w.Write([]byte("Error updating status"))
+		return
+	}
+
+	http.Redirect(w, r, "/student", http.StatusSeeOther)
+}
+
 func logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:   "student_id",
