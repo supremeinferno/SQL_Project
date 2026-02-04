@@ -24,10 +24,7 @@ Admins can manage students and view/update/delete any complaint.
 
 ## Tech Stack
 
-- **Language**: Go
-- **Web**: `net/http`, `html/template`
-- **Database**: SQLite (`github.com/mattn/go-sqlite3`)
-- **Frontend**: HTML templates + Bootstrap CSS
+SQLite
 
 ## Project Structure
 
