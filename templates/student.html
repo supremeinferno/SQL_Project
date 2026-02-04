@@ -111,9 +111,21 @@
                 <div class="text-end">
                     {{if eq .Status "Resolved"}}
                         <span class="badge bg-success d-block mb-2">Resolved</span>
+                    {{else if eq .Status "In Progress"}}
+                        <span class="badge bg-info d-block mb-2">In Progress</span>
                     {{else}}
                         <span class="badge bg-warning text-dark d-block mb-2">Pending</span>
                     {{end}}
+
+                    <form method="POST" action="/student/update-status" class="d-flex gap-1 align-items-center mb-2">
+                        <input type="hidden" name="id" value="{{.ID}}">
+                        <select name="status" class="form-select form-select-sm" style="width: auto;">
+                            <option value="Pending" {{if eq .Status "Pending"}}selected{{end}}>Pending</option>
+                            <option value="In Progress" {{if eq .Status "In Progress"}}selected{{end}}>In Progress</option>
+                            <option value="Resolved" {{if eq .Status "Resolved"}}selected{{end}}>Resolved</option>
+                        </select>
+                        <button class="btn btn-sm btn-primary" type="submit">Update</button>
+                    </form>
 
                     <form
                         method="POST"
