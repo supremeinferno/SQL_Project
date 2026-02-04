@@ -12,8 +12,7 @@ To reduce manual work using a database system
 
 ### Technologies Used
 
-MySQL </br>
-SQL
+SQLite
 
 ### Modules
 
