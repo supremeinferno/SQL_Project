@@ -36,7 +36,6 @@ SQLite
 ├── hostel.db          # SQLite database file (local)
 ├── sql/
 │   └── schema.sql     # Normalized DB schema + seed data
-├── NORMALIZATION.txt  # Summary of normalization changes
 ├── templates/         # HTML templates
 └── static/            # CSS assets
 ```
