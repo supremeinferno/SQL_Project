@@ -8,7 +8,7 @@ Admins can manage students and view/update/delete any complaint.
 
 - **Authentication**
   - Admin login
-  - Student login (stored in `students` table)
+  - Student login (stored in `users` table with role = student)
 - **Student dashboard**
   - Submit a complaint
   - View “My Complaints”
@@ -35,7 +35,8 @@ SQLite
 ├── db.go              # SQLite connection
 ├── hostel.db          # SQLite database file (local)
 ├── sql/
-│   └── schema.sql     # DB schema + default admin insert
+│   └── schema.sql     # Normalized DB schema + seed data
+├── NORMALIZATION.txt  # Summary of normalization changes
 ├── templates/         # HTML templates
 └── static/            # CSS assets
 ```
@@ -96,6 +97,7 @@ Use the **Username** and **Password** you set when registering the student.
 
 - This is a learning project: passwords are stored in plain text and cookies are simple.
 - Students can only **update/delete their own complaints** (enforced in SQL queries by `student_id`).
+- The schema in `sql/schema.sql` is now normalized. The Go handlers will need updates to match the new tables and foreign keys.
 
 ## License
 

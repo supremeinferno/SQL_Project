@@ -1,0 +1,39 @@
+Table users {
+  id integer [pk, increment]
+  username text [unique, not null]
+  password text [not null]
+  role text [not null, note: "admin|student"]
+}
+
+Table rooms {
+  id integer [pk, increment]
+  room_no text [unique, not null]
+  capacity integer [default: 1]
+}
+
+Table students {
+  id integer [pk, increment]
+  user_id integer [not null]
+  name text
+  roll_no text [unique]
+  room_id integer
+}
+
+Table complaint_statuses {
+  id integer [pk, increment]
+  name text [unique, not null]
+}
+
+Table complaints {
+  id integer [pk, increment]
+  student_id integer [not null]
+  status_id integer [not null]
+  title text
+  description text
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Ref: students.user_id > users.id
+Ref: students.room_id > rooms.id
+Ref: complaints.student_id > students.id
+Ref: complaints.status_id > complaint_statuses.id
