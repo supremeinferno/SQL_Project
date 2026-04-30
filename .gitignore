@@ -1,0 +1,23 @@
+# SQLite database (contains live data — keep out of version control)
+hostel.db
+
+# Go build output
+*.exe
+*.out
+/dbms-project
+
+# Go test cache
+/testcache
+
+# macOS metadata
+.DS_Store
+
+# IDE / editor directories
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment / secrets
+.env
+*.env.local

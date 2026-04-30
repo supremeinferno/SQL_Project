@@ -95,12 +95,13 @@ func adminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ------------------ FETCH COMPLAINTS ------------------
-	// Uses the admin_complaint_view (PL/SQL equivalent view defined in db.go)
 
 	cRows, err := db.Query(`
-		SELECT complaint_id, student_name, roll_no, room_no,
-		       title, description, status
-		FROM admin_complaint_view
+		SELECT c.id, s.name, s.roll_no, s.room_no,
+		       c.title, c.description, c.status
+		FROM complaints c
+		LEFT JOIN students s ON c.student_id = s.id
+		ORDER BY c.created_at DESC
 	`)
 	if err != nil {
 		w.Write([]byte("Error loading complaints"))
@@ -449,54 +450,6 @@ func deleteStudent(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
-func auditLogHandler(w http.ResponseWriter, r *http.Request) {
-	if _, err := r.Cookie("admin"); err != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
-
-	rows, err := db.Query(`
-		SELECT a.id, a.complaint_id,
-		       COALESCE(s.name, 'Deleted Student') AS student_name,
-		       a.old_status, a.new_status, a.changed_at
-		FROM complaint_audit a
-		LEFT JOIN complaints c ON a.complaint_id = c.id
-		LEFT JOIN students   s ON c.student_id   = s.id
-		ORDER BY a.changed_at DESC
-	`)
-	if err != nil {
-		w.Write([]byte("Error loading audit log"))
-		return
-	}
-	defer rows.Close()
-
-	type AuditEntry struct {
-		ID          int
-		ComplaintID int
-		StudentName string
-		OldStatus   string
-		NewStatus   string
-		ChangedAt   string
-	}
-
-	var entries []AuditEntry
-	for rows.Next() {
-		var e AuditEntry
-		rows.Scan(&e.ID, &e.ComplaintID, &e.StudentName,
-			&e.OldStatus, &e.NewStatus, &e.ChangedAt)
-		entries = append(entries, e)
-	}
-
-	tmpl := template.Must(template.ParseFiles(
-		"templates/base.html",
-		"templates/audit.html",
-	))
-	tmpl.Execute(w, PageData{
-		Title: "Audit Log",
-		Data:  entries,
-	})
-}
-
 func exportStudentsCSV(w http.ResponseWriter, r *http.Request) {
 	// Admin check
 	if _, err := r.Cookie("admin"); err != nil {
