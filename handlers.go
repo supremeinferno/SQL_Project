@@ -48,7 +48,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if role == "admin" {
 		var id int
 		err := db.QueryRow(
-			"SELECT id FROM admins WHERE username=? AND password=?",
+			"SELECT id FROM admins WHERE username=:1 AND password=:2",
 			username, password,
 		).Scan(&id)
 
@@ -68,7 +68,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if role == "student" {
 		var id int
 		err := db.QueryRow(
-			"SELECT id FROM students WHERE username=? AND password=?",
+			"SELECT id FROM students WHERE username=:1 AND password=:2",
 			username, password,
 		).Scan(&id)
 
@@ -141,7 +141,7 @@ func adminDashboard(w http.ResponseWriter, r *http.Request) {
 		sRows, err = db.Query(`
 		SELECT id, name, roll_no, room_no, username, password
 		FROM students
-		WHERE roll_no LIKE ?
+		WHERE roll_no LIKE :1
 	`, "%"+rollSearch+"%")
 	} else {
 		sRows, err = db.Query(`
@@ -211,7 +211,7 @@ func studentDashboard(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query(`
 		SELECT id, title, description, status
 		FROM complaints
-		WHERE student_id = ?
+		WHERE student_id = :1
 		ORDER BY created_at DESC
 	`, cookie.Value)
 
@@ -263,8 +263,7 @@ func addStudent(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 
 	_, err := db.Exec(
-		`INSERT INTO students (name, roll_no, room_no, username, password)
-		 VALUES (?, ?, ?, ?, ?)`,
+		`BEGIN hostel_pkg.add_student(:1, :2, :3, :4, :5); END;`,
 		name, roll, room, username, password,
 	)
 
@@ -293,7 +292,7 @@ func addComplaint(w http.ResponseWriter, r *http.Request) {
 
 	_, err = db.Exec(
 		`INSERT INTO complaints (student_id, title, description)
-		 VALUES (?, ?, ?)`,
+		 VALUES (:1, :2, :3)`,
 		studentID, title, description,
 	)
 
@@ -326,7 +325,7 @@ func deleteStudentComplaint(w http.ResponseWriter, r *http.Request) {
 
 	// Delete complaint only if it belongs to the logged-in student
 	_, err = db.Exec(
-		"DELETE FROM complaints WHERE id = ? AND student_id = ?",
+		"DELETE FROM complaints WHERE id = :1 AND student_id = :2",
 		complaintID,
 		cookie.Value,
 	)
@@ -358,7 +357,7 @@ func updateStudentComplaintStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = db.Exec(
-		"UPDATE complaints SET status = ? WHERE id = ? AND student_id = ?",
+		"UPDATE complaints SET status = :1 WHERE id = :2 AND student_id = :3",
 		status, complaintID, cookie.Value,
 	)
 	if err != nil {
@@ -397,8 +396,8 @@ func updateComplaintStatus(w http.ResponseWriter, r *http.Request) {
 	status := r.FormValue("status")
 
 	db.Exec(
-		"UPDATE complaints SET status=? WHERE id=?",
-		status, id,
+		"BEGIN hostel_pkg.update_complaint_status(:1, :2); END;",
+		id, status,
 	)
 
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
@@ -418,7 +417,7 @@ func deleteComplaint(w http.ResponseWriter, r *http.Request) {
 
 	id := r.FormValue("id")
 
-	_, err := db.Exec("DELETE FROM complaints WHERE id = ?", id)
+	_, err := db.Exec("DELETE FROM complaints WHERE id = :1", id)
 	if err != nil {
 		w.Write([]byte("Error deleting complaint"))
 		return
@@ -441,11 +440,8 @@ func deleteStudent(w http.ResponseWriter, r *http.Request) {
 
 	studentID := r.FormValue("id")
 
-	// First delete complaints of the student
-	db.Exec("DELETE FROM complaints WHERE student_id = ?", studentID)
-
-	// Then delete the student
-	db.Exec("DELETE FROM students WHERE id = ?", studentID)
+	// Use PL/SQL package procedure to delete student and cascade complaints
+	db.Exec("BEGIN hostel_pkg.delete_student(:1); END;", studentID)
 
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }

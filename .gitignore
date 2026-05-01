@@ -1,10 +1,12 @@
-# SQLite database (contains live data — keep out of version control)
-hostel.db
-
 # Go build output
 *.exe
 *.out
 /dbms-project
+/hostel-management
+bin/
+
+# Go vendor
+vendor/
 
 # Go test cache
 /testcache
@@ -17,7 +19,14 @@ hostel.db
 .idea/
 *.swp
 *.swo
-
+.claude
 # Environment / secrets
 .env
 *.env.local
+
+# Databases (legacy SQLite files)
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
