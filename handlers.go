@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"html/template"
 	"net/http"
+	"fmt"
 	"strconv"
 )
 
@@ -45,10 +46,15 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	role := r.FormValue("role")
 
+	fmt.Println("Username:", username)
+	fmt.Println("Password:", password)
+	fmt.Println("Role:", role)
+
 	if role == "admin" {
-		var id int
+	var id int
+
 		err := db.QueryRow(
-			"SELECT id FROM admins WHERE username=:1 AND password=:2",
+			"SELECT id FROM users WHERE username=:1 AND password=:2 AND role='admin'",
 			username, password,
 		).Scan(&id)
 
@@ -63,6 +69,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		fmt.Println("Admin login error:", err) // debug
 	}
 
 	if role == "student" {

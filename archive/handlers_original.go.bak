@@ -48,8 +48,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if role == "admin" {
 		var id int
 		err := db.QueryRow(
-			"SELECT id FROM admins WHERE username=? AND password=?",
-			username, password,
+			"SELECT id FROM admins WHERE username=? AND password=?" AND role='admin' ",
+			username, password, role,
 		).Scan(&id)
 
 		if err == nil {
