@@ -1,0 +1,54 @@
+{{define "content"}}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">Complaint Status Audit Log</h3>
+    <a href="/admin" class="btn btn-outline-secondary btn-sm">Back to Dashboard</a>
+</div>
+
+<div class="card p-4">
+    <p class="text-muted mb-3">
+        Every status change is automatically recorded here by the
+        <code>trg_complaint_status_audit</code> SQLite trigger
+        (PL/SQL equivalent defined in <code>sql/sqlite_plsql.sql</code>).
+    </p>
+
+    <table class="table table-bordered table-hover">
+        <thead class="table-dark">
+        <tr>
+            <th>#</th>
+            <th>Complaint ID</th>
+            <th>Student</th>
+            <th>Old Status</th>
+            <th>New Status</th>
+            <th>Changed At</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{range .}}
+        <tr>
+            <td>{{.ID}}</td>
+            <td>{{.ComplaintID}}</td>
+            <td>{{.StudentName}}</td>
+            <td>
+                <span class="badge bg-secondary">{{.OldStatus}}</span>
+            </td>
+            <td>
+                <span class="badge
+                    {{if eq .NewStatus "Resolved"}}bg-success
+                    {{else if eq .NewStatus "In Progress"}}bg-primary
+                    {{else}}bg-warning text-dark{{end}}">
+                    {{.NewStatus}}
+                </span>
+            </td>
+            <td>{{.ChangedAt}}</td>
+        </tr>
+        {{else}}
+        <tr>
+            <td colspan="6" class="text-center text-muted">
+                No status changes recorded yet. Update a complaint's status to see entries here.
+            </td>
+        </tr>
+        {{end}}
+        </tbody>
+    </table>
+</div>
+{{end}}

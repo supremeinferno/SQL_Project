@@ -1,0 +1,32 @@
+# Go build output
+*.exe
+*.out
+/dbms-project
+/hostel-management
+bin/
+
+# Go vendor
+vendor/
+
+# Go test cache
+/testcache
+
+# macOS metadata
+.DS_Store
+
+# IDE / editor directories
+.vscode/
+.idea/
+*.swp
+*.swo
+.claude
+# Environment / secrets
+.env
+*.env.local
+
+# Databases (legacy SQLite files)
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal

@@ -1,103 +1,112 @@
-# Hostel Management System (Go + SQLite)
+# Hostel Management System (Go + Oracle SQL)
 
-A simple hostel management web app that supports **Admin** and **Student** logins.
-Students can submit complaints, **view their complaints**, **update complaint status**, and **delete their own complaints**.
-Admins can manage students and view/update/delete any complaint.
+A hostel management web app with **Admin** and **Student** logins, featuring a full **PL/SQL implementation** (triggers, views, stored procedures, cursors, and exception handling) alongside the Go backend.
 
 ## Features
 
-- **Authentication**
-  - Admin login
-  - Student login (stored in `users` table with role = student)
-- **Student dashboard**
-  - Submit a complaint
-  - View “My Complaints”
-  - Update status (Pending / In Progress / Resolved)
-  - Delete own complaints
+- **Authentication** — separate admin and student logins
+- **Student dashboard** — submit, view, update status, and delete own complaints
 - **Admin dashboard**
-  - Register students
-  - View all complaints (with student info)
-  - Update complaint status
-  - Delete complaints
+  - Register / delete students
+  - View and manage all complaints (via SQL view)
   - Search students by roll number
   - Export students to CSV
+  - **Audit Log** — every complaint status change is recorded automatically by a trigger
+- **PL/SQL layer**
+  - 5 Oracle triggers (validation, audit trail, cascade delete, admin protection)
+  - 2 SQL views (`admin_complaint_view`, `student_complaint_summary`)
+  - Oracle PL/SQL Package (`hostel_pkg`) with stored procedures, functions, cursors, and exception handling
 
 ## Tech Stack
 
-SQLite
+| Layer    | Technology                         |
+|----------|------------------------------------|
+| Language | Go                                 |
+| Database | Oracle SQL (via `sijms/go-ora/v2`) |
+| Frontend | HTML templates + Bootstrap 5       |
 
 ## Project Structure
 
 ```text
 .
-├── main.go            # routes + server startup
-├── handlers.go        # all HTTP handlers
-├── db.go              # SQLite connection
-├── hostel.db          # SQLite database file (local)
+├── main.go                    # routes + server startup
+├── handlers.go                # HTTP handlers (calls PL/SQL procedures)
+├── db.go                      # Oracle connection setup
+├── go.mod / go.sum
 ├── sql/
-│   └── schema.sql     # Normalized DB schema + seed data
-├── templates/         # HTML templates
-└── static/            # CSS assets
+│   ├── schema.sql             # base table definitions + seed data
+│   ├── schema.dbml            # DBML diagram source
+│   └── plsql.sql              # Oracle PL/SQL implementation
+│                                (package, procedures, functions, cursors)
+├── archive/                   # originals before PL/SQL was added
+│   ├── db_original.go.bak
+│   ├── handlers_original.go.bak
+│   └── schema_original.sql
+├── templates/
+│   ├── base.html
+│   ├── login.html
+│   ├── admin.html
+│   ├── student.html
+│   └── audit.html             # audit log page (PL/SQL demo)
+└── static/                    # CSS assets
 ```
+
+## PL/SQL Implementation
+
+### Oracle PL/SQL (`sql/plsql.sql`)
+
+The database logic is heavily driven by Oracle PL/SQL:
+
+| Construct | Details |
+|-----------|---------|
+| **Package** | `hostel_pkg` — specification + body |
+| **Procedures** | `add_student`, `update_complaint_status`, `delete_student`, `list_pending_complaints` |
+| **Function** | `get_complaint_count(student_id)` |
+| **Cursor** | Explicit cursor in `list_pending_complaints` |
+| **Exception handling** | Named exceptions, `NO_DATA_FOUND`, `OTHERS`, `ROLLBACK` |
+| **Triggers** | 5 triggers (audit, cascade delete, validation, admin protection) |
+| **Views** | `admin_complaint_view`, `student_complaint_summary` |
 
 ## Requirements
 
-- Go installed (any modern Go version should work)
-- SQLite is embedded via the Go driver (no separate SQLite install required)
+- Go (any modern version)
+- An Oracle Database instance (e.g., Oracle Database Free, Express Edition, or Enterprise)
 
 ## Run Locally
 
-### 1) Clone and enter the project
-
 ```bash
+# 1. Clone
 git clone https://github.com/supremeinferno/SQL_Project
-cd sql-projectupdated
-```
+cd SQL_Project
 
-### 2) (First time) Create the database/tables
+# 2. Setup the Oracle Database
+# Connect to your Oracle database using SQL*Plus or a similar tool
+# and execute the PL/SQL script to create tables, views, triggers, and packages:
+# sqlplus username/password@localhost:1521/XEPDB1 @sql/plsql.sql
 
-This project uses `./hostel.db`.
-If you already have `hostel.db`, you can skip this step.
+# 3. Configure connection
+# Set the ORACLE_DSN environment variable with your Oracle credentials:
+export ORACLE_DSN="oracle://username:password@localhost:1521/XEPDB1"
 
-Option A — using `sqlite3` CLI (recommended if you have it installed):
-
-```bash
-rm -f hostel.db
-sqlite3 hostel.db < sql/schema.sql
-```
-
-Option B — keep the provided `hostel.db` (already in the repo), just run the app.
-
-### 3) Start the server
-
-```bash
+# 4. Start the server
 go run .
 ```
 
-Then open:
-
-- `http://localhost:8080`
+Open `http://localhost:8080`
 
 ## Login
 
-### Admin
+| Role    | Username | Password |
+|---------|----------|----------|
+| Admin   | `admin`  | `123`    |
+| Student | set by admin when registering | set by admin |
 
-Default admin from `sql/schema.sql`:
+## Notes
 
-- **username**: `admin`
-- **password**: `123`
-
-### Student
-
-Students are created by the admin on the Admin dashboard.
-Use the **Username** and **Password** you set when registering the student.
-
-## Notes / Security
-
-- This is a learning project: passwords are stored in plain text and cookies are simple.
-- Students can only **update/delete their own complaints** (enforced in SQL queries by `student_id`).
-- The schema in `sql/schema.sql` is now normalized. The Go handlers will need updates to match the new tables and foreign keys.
+- Passwords are stored in plain text — this is a learning/demo project.
+- Student operations (update/delete complaint) are scoped to their own `student_id` in SQL.
+- The Go backend now calls Oracle PL/SQL package procedures (e.g., `hostel_pkg.add_student`) instead of running raw `INSERT`/`UPDATE` queries where applicable.
 
 ## License
 
-For learning/demo use. Add a license if you plan to publish publicly.
+For learning/demo use only.
