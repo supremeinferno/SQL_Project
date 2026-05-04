@@ -54,7 +54,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	var id int
 
 		err := db.QueryRow(
-			"SELECT id FROM users WHERE username=:1 AND password=:2 AND role='admin'",
+			"SELECT id FROM admins WHERE username=:1 AND password=:2",
 			username, password,
 		).Scan(&id)
 

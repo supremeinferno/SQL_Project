@@ -61,7 +61,7 @@ func connectDB() {
 
 	// Default DSN (Docker Oracle XE)
 	if dsn == "" {
-		dsn = "oracle://system:123@localhost:1521/XEPDB1"
+		dsn = "oracle://system:Oracle123@localhost:1521/FREEPDB1"
 	}
 
 	var err error
