@@ -22,7 +22,8 @@ A hostel management web app with **Admin** and **Student** logins, featuring a f
 | Layer    | Technology                         |
 |----------|------------------------------------|
 | Language | Go                                 |
-| Database | Oracle SQL (via `sijms/go-ora/v2`) |
+| Database | Oracle Database 23c Free (Docker)  |
+| Driver   | `sijms/go-ora/v2`                  |
 | Frontend | HTML templates + Bootstrap 5       |
 
 ## Project Structure
@@ -34,10 +35,9 @@ A hostel management web app with **Admin** and **Student** logins, featuring a f
 ├── db.go                      # Oracle connection setup
 ├── go.mod / go.sum
 ├── sql/
-│   ├── schema.sql             # base table definitions + seed data
-│   ├── schema.dbml            # DBML diagram source
-│   └── plsql.sql              # Oracle PL/SQL implementation
-│                                (package, procedures, functions, cursors)
+│   ├── plsql.sql              # Oracle schema + PL/SQL implementation
+│   │                            (sequences, tables, views, triggers, package)
+│   └── schema.dbml            # DBML diagram source
 ├── archive/                   # originals before PL/SQL was added
 │   ├── db_original.go.bak
 │   ├── handlers_original.go.bak
@@ -55,8 +55,6 @@ A hostel management web app with **Admin** and **Student** logins, featuring a f
 
 ### Oracle PL/SQL (`sql/plsql.sql`)
 
-The database logic is heavily driven by Oracle PL/SQL:
-
 | Construct | Details |
 |-----------|---------|
 | **Package** | `hostel_pkg` — specification + body |
@@ -70,7 +68,7 @@ The database logic is heavily driven by Oracle PL/SQL:
 ## Requirements
 
 - Go (any modern version)
-- An Oracle Database instance (e.g., Oracle Database Free, Express Edition, or Enterprise)
+- Docker
 
 ## Run Locally
 
@@ -79,16 +77,26 @@ The database logic is heavily driven by Oracle PL/SQL:
 git clone https://github.com/supremeinferno/SQL_Project
 cd SQL_Project
 
-# 2. Setup the Oracle Database
-# Connect to your Oracle database using SQL*Plus or a similar tool
-# and execute the PL/SQL script to create tables, views, triggers, and packages:
-# sqlplus username/password@localhost:1521/XEPDB1 @sql/plsql.sql
+# 2. Start Oracle Database Free container
+docker run -d --name oracle-xe \
+  -p 1521:1521 \
+  -e ORACLE_PASSWORD=Oracle123 \
+  container-registry.oracle.com/database/free:latest
 
-# 3. Configure connection
-# Set the ORACLE_DSN environment variable with your Oracle credentials:
-export ORACLE_DSN="oracle://username:password@localhost:1521/XEPDB1"
+# Wait for: DATABASE IS READY TO USE!
+docker logs -f oracle-xe
 
-# 4. Start the server
+# 3. Load schema and PL/SQL objects
+docker exec -i oracle-xe sqlplus system/Oracle123@FREEPDB1 @/dev/stdin < sql/plsql.sql
+
+# 4. Seed the admin account
+docker exec -i oracle-xe sqlplus system/Oracle123@FREEPDB1 <<'EOF'
+INSERT INTO admins (username, password) VALUES ('admin', '123');
+COMMIT;
+EXIT;
+EOF
+
+# 5. Start the server
 go run .
 ```
 
@@ -105,7 +113,8 @@ Open `http://localhost:8080`
 
 - Passwords are stored in plain text — this is a learning/demo project.
 - Student operations (update/delete complaint) are scoped to their own `student_id` in SQL.
-- The Go backend now calls Oracle PL/SQL package procedures (e.g., `hostel_pkg.add_student`) instead of running raw `INSERT`/`UPDATE` queries where applicable.
+- The Go backend calls Oracle PL/SQL package procedures (e.g., `hostel_pkg.add_student`) instead of raw SQL where applicable.
+- The default DSN connects as `system` to `FREEPDB1`. Override with `ORACLE_DSN` env var if needed.
 
 ## License
 
