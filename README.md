@@ -67,40 +67,86 @@ A hostel management web app with **Admin** and **Student** logins, featuring a f
 
 ## Requirements
 
-- Go (any modern version)
-- Docker
+- [Go](https://go.dev/dl/) (any modern version)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac / Windows / Linux)
+- A free [Oracle Container Registry](https://container-registry.oracle.com) account (needed to pull the Oracle image)
+
+> **Windows users:** All commands below work in **PowerShell** or **Git Bash**. If you are using Command Prompt (cmd.exe), use Git Bash instead — heredoc syntax (`<<`) is not supported in cmd.exe.
 
 ## Run Locally
 
+### 1. Clone the repository
+
 ```bash
-# 1. Clone
 git clone https://github.com/supremeinferno/SQL_Project
 cd SQL_Project
+```
 
-# 2. Start Oracle Database Free container
+### 2. Log in to the Oracle Container Registry
+
+Create a free account at https://container-registry.oracle.com, then run:
+
+```bash
+docker login container-registry.oracle.com
+```
+
+Enter your Oracle account email and password when prompted.
+
+### 3. Start the Oracle Database container
+
+```bash
 docker run -d --name oracle-xe \
   -p 1521:1521 \
   -e ORACLE_PASSWORD=Oracle123 \
   container-registry.oracle.com/database/free:latest
+```
 
-# Wait for: DATABASE IS READY TO USE!
+> The image is ~2 GB — the first pull will take a few minutes depending on your connection.
+
+Wait until the database is ready (look for `DATABASE IS READY TO USE!`):
+
+```bash
 docker logs -f oracle-xe
+```
 
-# 3. Load schema and PL/SQL objects
+Press `Ctrl+C` to stop following logs once you see that message.
+
+### 4. Load the schema and PL/SQL objects
+
+**Mac / Linux / Git Bash (Windows):**
+```bash
 docker exec -i oracle-xe sqlplus system/Oracle123@FREEPDB1 @/dev/stdin < sql/plsql.sql
+```
 
-# 4. Seed the admin account
+**PowerShell (Windows):**
+```powershell
+Get-Content sql/plsql.sql | docker exec -i oracle-xe sqlplus system/Oracle123@FREEPDB1 @/dev/stdin
+```
+
+### 5. Seed the admin account
+
+**Mac / Linux / Git Bash (Windows):**
+```bash
 docker exec -i oracle-xe sqlplus system/Oracle123@FREEPDB1 <<'EOF'
 INSERT INTO admins (username, password) VALUES ('admin', '123');
 COMMIT;
 EXIT;
 EOF
+```
 
-# 5. Start the server
+**PowerShell (Windows):**
+```powershell
+"INSERT INTO admins (username, password) VALUES ('admin', '123');`nCOMMIT;`nEXIT;" |
+  docker exec -i oracle-xe sqlplus system/Oracle123@FREEPDB1
+```
+
+### 6. Start the Go server
+
+```bash
 go run .
 ```
 
-Open `http://localhost:8080`
+Open `http://localhost:8080` in your browser.
 
 ## Login
 
@@ -109,12 +155,35 @@ Open `http://localhost:8080`
 | Admin   | `admin`  | `123`    |
 | Student | set by admin when registering | set by admin |
 
+## Custom Database Connection
+
+By default the app connects as `system` to `FREEPDB1` on `localhost:1521`. Override with the `ORACLE_DSN` environment variable if your setup differs:
+
+```bash
+# Mac / Linux
+export ORACLE_DSN="oracle://system:Oracle123@localhost:1521/FREEPDB1"
+go run .
+
+# PowerShell (Windows)
+$env:ORACLE_DSN="oracle://system:Oracle123@localhost:1521/FREEPDB1"
+go run .
+```
+
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `port is already allocated` | Another service is using 1521. Stop it, or change the port: `-p 1522:1521` and update `ORACLE_DSN` accordingly. |
+| `docker: permission denied` | On Linux, prefix commands with `sudo` or add your user to the `docker` group. |
+| Container exits immediately | Run `docker logs oracle-xe` to see the error. Usually not enough memory — Docker Desktop needs at least **4 GB RAM** allocated. |
+| `go: command not found` | Install Go from https://go.dev/dl/ and make sure it is on your `PATH`. |
+| `ORA-01017: invalid username/password` | The DB may still be initializing. Wait for `DATABASE IS READY TO USE!` in the logs, then retry step 4. |
+
 ## Notes
 
 - Passwords are stored in plain text — this is a learning/demo project.
 - Student operations (update/delete complaint) are scoped to their own `student_id` in SQL.
 - The Go backend calls Oracle PL/SQL package procedures (e.g., `hostel_pkg.add_student`) instead of raw SQL where applicable.
-- The default DSN connects as `system` to `FREEPDB1`. Override with `ORACLE_DSN` env var if needed.
 
 ## License
 
