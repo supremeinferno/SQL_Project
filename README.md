@@ -36,24 +36,17 @@ A hostel management web app with **Admin** and **Student** logins, featuring a f
 ├── go.mod / go.sum
 ├── sql/
 │   ├── plsql.sql              # Oracle schema + PL/SQL implementation
-│   │                            (sequences, tables, views, triggers, package)
 │   └── schema.dbml            # DBML diagram source
-├── archive/                   # originals before PL/SQL was added
-│   ├── db_original.go.bak
-│   ├── handlers_original.go.bak
-│   └── schema_original.sql
 ├── templates/
 │   ├── base.html
 │   ├── login.html
 │   ├── admin.html
 │   ├── student.html
-│   └── audit.html             # audit log page (PL/SQL demo)
+│   └── audit.html
 └── static/                    # CSS assets
 ```
 
 ## PL/SQL Implementation
-
-### Oracle PL/SQL (`sql/plsql.sql`)
 
 | Construct | Details |
 |-----------|---------|
@@ -65,34 +58,58 @@ A hostel management web app with **Admin** and **Student** logins, featuring a f
 | **Triggers** | 5 triggers (audit, cascade delete, validation, admin protection) |
 | **Views** | `admin_complaint_view`, `student_complaint_summary` |
 
-## Requirements
+---
 
-- [Go](https://go.dev/dl/) (any modern version)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac / Windows / Linux)
-- A free [Oracle Container Registry](https://container-registry.oracle.com) account (needed to pull the Oracle image)
+## Before You Start — Install These
 
-> **Windows users:** All commands below work in **PowerShell** or **Git Bash**. If you are using Command Prompt (cmd.exe), use Git Bash instead — heredoc syntax (`<<`) is not supported in cmd.exe.
+You need three things installed before running the project:
+
+### 1. Go
+Download and install from https://go.dev/dl/
+
+Verify it works:
+```bash
+go version
+```
+
+### 2. Docker Desktop
+Download and install from https://www.docker.com/products/docker-desktop/
+
+After installing, **open Docker Desktop and wait for it to start** (look for the whale icon in your taskbar/menu bar). Docker must be running before you use any `docker` commands.
+
+Verify it works:
+```bash
+docker version
+```
+
+### 3. Oracle Container Registry account
+The Oracle database image requires a free account to download.
+
+- Sign up at https://container-registry.oracle.com
+- After signing in, go to **Database → free** and click **Accept** on the license agreement
+
+> **Windows users:** Use **PowerShell** or **Git Bash** for all commands below. Command Prompt (cmd.exe) does not support the heredoc syntax (`<<`) used in some steps.
+
+---
 
 ## Run Locally
 
-### 1. Clone the repository
+### Step 1 — Clone the repository
 
 ```bash
 git clone https://github.com/supremeinferno/SQL_Project
 cd SQL_Project
 ```
 
-### 2. Log in to the Oracle Container Registry
-
-Create a free account at https://container-registry.oracle.com, then run:
+### Step 2 — Log in to the Oracle Container Registry
 
 ```bash
 docker login container-registry.oracle.com
 ```
 
-Enter your Oracle account email and password when prompted.
+Enter the email and password of your Oracle account when prompted.
 
-### 3. Start the Oracle Database container
+### Step 3 — Start the Oracle database
 
 ```bash
 docker run -d --name oracle-xe \
@@ -101,19 +118,19 @@ docker run -d --name oracle-xe \
   container-registry.oracle.com/database/free:latest
 ```
 
-> The image is ~2 GB — the first pull will take a few minutes depending on your connection.
+> The image is ~2 GB — the first download will take a few minutes.
 
-Wait until the database is ready (look for `DATABASE IS READY TO USE!`):
+Wait until the database is ready before continuing. Run this command and watch the output:
 
 ```bash
 docker logs -f oracle-xe
 ```
 
-Press `Ctrl+C` to stop following logs once you see that message.
+When you see `DATABASE IS READY TO USE!`, press `Ctrl+C` to stop watching the logs.
 
-### 4. Load the schema and PL/SQL objects
+### Step 4 — Load the schema and PL/SQL objects
 
-**Mac / Linux / Git Bash (Windows):**
+**Mac / Linux / Git Bash:**
 ```bash
 docker exec -i oracle-xe sqlplus system/Oracle123@FREEPDB1 @/dev/stdin < sql/plsql.sql
 ```
@@ -123,9 +140,9 @@ docker exec -i oracle-xe sqlplus system/Oracle123@FREEPDB1 @/dev/stdin < sql/pls
 Get-Content sql/plsql.sql | docker exec -i oracle-xe sqlplus system/Oracle123@FREEPDB1 @/dev/stdin
 ```
 
-### 5. Seed the admin account
+### Step 5 — Create the admin account
 
-**Mac / Linux / Git Bash (Windows):**
+**Mac / Linux / Git Bash:**
 ```bash
 docker exec -i oracle-xe sqlplus system/Oracle123@FREEPDB1 <<'EOF'
 INSERT INTO admins (username, password) VALUES ('admin', '123');
@@ -140,7 +157,7 @@ EOF
   docker exec -i oracle-xe sqlplus system/Oracle123@FREEPDB1
 ```
 
-### 6. Start the Go server
+### Step 6 — Start the app
 
 ```bash
 go run .
@@ -148,16 +165,39 @@ go run .
 
 Open `http://localhost:8080` in your browser.
 
+---
+
 ## Login
 
 | Role    | Username | Password |
 |---------|----------|----------|
 | Admin   | `admin`  | `123`    |
-| Student | set by admin when registering | set by admin |
+| Student | set by admin during registration | set by admin |
+
+---
+
+## Coming Back Later
+
+Steps 4 and 5 only need to be done **once**. Next time you want to run the project:
+
+```bash
+# Start the database container (if it's not already running)
+docker start oracle-xe
+
+# Start the app
+go run .
+```
+
+To stop the database when you're done:
+```bash
+docker stop oracle-xe
+```
+
+---
 
 ## Custom Database Connection
 
-By default the app connects as `system` to `FREEPDB1` on `localhost:1521`. Override with the `ORACLE_DSN` environment variable if your setup differs:
+By default the app connects as `system` to `FREEPDB1` on `localhost:1521`. Set the `ORACLE_DSN` environment variable to override this:
 
 ```bash
 # Mac / Linux
@@ -169,15 +209,21 @@ $env:ORACLE_DSN="oracle://system:Oracle123@localhost:1521/FREEPDB1"
 go run .
 ```
 
+---
+
 ## Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| `port is already allocated` | Another service is using 1521. Stop it, or change the port: `-p 1522:1521` and update `ORACLE_DSN` accordingly. |
-| `docker: permission denied` | On Linux, prefix commands with `sudo` or add your user to the `docker` group. |
-| Container exits immediately | Run `docker logs oracle-xe` to see the error. Usually not enough memory — Docker Desktop needs at least **4 GB RAM** allocated. |
-| `go: command not found` | Install Go from https://go.dev/dl/ and make sure it is on your `PATH`. |
-| `ORA-01017: invalid username/password` | The DB may still be initializing. Wait for `DATABASE IS READY TO USE!` in the logs, then retry step 4. |
+| `docker: command not found` | Docker Desktop is not installed or not running. Install it from https://www.docker.com/products/docker-desktop/ and make sure it is open. |
+| `port is already allocated` | Port 1521 is in use. Stop the conflicting service, or use a different port: `-p 1522:1521` and update `ORACLE_DSN` to match. |
+| `docker: permission denied` | On Linux, run with `sudo` or add your user to the `docker` group: `sudo usermod -aG docker $USER` (then log out and back in). |
+| Container exits immediately | Run `docker logs oracle-xe` to see why. Most likely cause: not enough memory — Docker Desktop needs at least **4 GB RAM** allocated (check Docker Desktop → Settings → Resources). |
+| `go: command not found` | Go is not installed or not on your PATH. Install from https://go.dev/dl/ and restart your terminal. |
+| `ORA-01017: invalid username/password` | The database is still initializing. Wait for `DATABASE IS READY TO USE!` in `docker logs -f oracle-xe`, then retry Step 4. |
+| `unauthorized` when pulling image | You haven't accepted the license on the Oracle Container Registry website. Sign in at https://container-registry.oracle.com → Database → free → Accept. |
+
+---
 
 ## Notes
 
