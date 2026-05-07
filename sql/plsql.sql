@@ -1,22 +1,16 @@
--- ============================================================
--- HOSTEL MANAGEMENT SYSTEM - ORACLE PL/SQL IMPLEMENTATION
--- ============================================================
--- Covers: Sequences, Tables, Views, Triggers, Package (stored
---         procedures, functions, cursors, exception handling)
--- For the SQLite-compatible version, see sqlite_plsql.sql
--- ============================================================
+-- Hostel management system - PL/SQL bits for Oracle.
+-- Has the usual stuff: sequences, tables, views, a few triggers
+-- and one package that wraps the procedures/functions we call
+-- from the Go side.
+-- If you're running this on SQLite instead, use sqlite_plsql.sql.
 
--- ------------------------------------------------------------
--- SEQUENCES  (Oracle equivalent of AUTOINCREMENT)
--- ------------------------------------------------------------
+-- Sequences (Oracle doesn't have AUTOINCREMENT, so this is how we fake it)
 CREATE SEQUENCE admin_seq    START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 CREATE SEQUENCE student_seq  START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 CREATE SEQUENCE complaint_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 CREATE SEQUENCE audit_seq    START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
--- ------------------------------------------------------------
--- TABLES
--- ------------------------------------------------------------
+-- Tables
 CREATE TABLE admins (
     id       NUMBER DEFAULT admin_seq.NEXTVAL PRIMARY KEY,
     username VARCHAR2(100) NOT NULL,
@@ -51,9 +45,7 @@ CREATE TABLE complaint_audit (
     changed_at   TIMESTAMP DEFAULT SYSTIMESTAMP
 );
 
--- ------------------------------------------------------------
--- VIEWS
--- ------------------------------------------------------------
+-- Views
 CREATE OR REPLACE VIEW admin_complaint_view AS
 SELECT
     c.id          AS complaint_id,
@@ -84,11 +76,9 @@ LEFT JOIN complaints c ON s.id = c.student_id
 GROUP BY s.id, s.name, s.roll_no, s.room_no;
 /
 
--- ------------------------------------------------------------
--- TRIGGERS
--- ------------------------------------------------------------
+-- Triggers
 
--- Trigger 1: Write to audit log whenever a complaint status changes
+-- Drop a row in the audit table every time a complaint's status changes.
 CREATE OR REPLACE TRIGGER trg_complaint_status_audit
 AFTER UPDATE OF status ON complaints
 FOR EACH ROW
@@ -99,7 +89,8 @@ BEGIN
 END;
 /
 
--- Trigger 2: Cascade-delete a student's complaints before deleting the student
+-- If a student is being deleted, get rid of their complaints first
+-- so we don't trip the foreign key.
 CREATE OR REPLACE TRIGGER trg_cascade_delete_complaints
 BEFORE DELETE ON students
 FOR EACH ROW
@@ -108,7 +99,8 @@ BEGIN
 END;
 /
 
--- Trigger 3: Prevent the primary admin account (id = 1) from being deleted
+-- Don't ever let admin id=1 get deleted. That's the bootstrap account
+-- and losing it locks everyone out.
 CREATE OR REPLACE TRIGGER trg_protect_main_admin
 BEFORE DELETE ON admins
 FOR EACH ROW
@@ -119,7 +111,8 @@ BEGIN
 END;
 /
 
--- Trigger 4: Reject invalid status values on INSERT (belt-and-suspenders)
+-- The CHECK constraint already covers this, but I want the trigger here
+-- too just in case someone adds a new status path that bypasses it.
 CREATE OR REPLACE TRIGGER trg_validate_insert_status
 BEFORE INSERT ON complaints
 FOR EACH ROW
@@ -133,7 +126,7 @@ BEGIN
 END;
 /
 
--- Trigger 5: Reject invalid status values on UPDATE
+-- Same check, but for updates.
 CREATE OR REPLACE TRIGGER trg_validate_update_status
 BEFORE UPDATE OF status ON complaints
 FOR EACH ROW
@@ -146,12 +139,10 @@ BEGIN
 END;
 /
 
--- ------------------------------------------------------------
--- PACKAGE SPECIFICATION
--- ------------------------------------------------------------
+-- Package spec - this is the public interface we call from Go.
 CREATE OR REPLACE PACKAGE hostel_pkg AS
 
-    -- Register a new student; raises error on duplicate roll number
+    -- Add a new student. Blows up if the roll number is already taken.
     PROCEDURE add_student(
         p_name     IN VARCHAR2,
         p_roll_no  IN VARCHAR2,
@@ -160,21 +151,21 @@ CREATE OR REPLACE PACKAGE hostel_pkg AS
         p_password IN VARCHAR2
     );
 
-    -- Update a complaint's status with full validation
+    -- Flip a complaint's status. Validates the new value first.
     PROCEDURE update_complaint_status(
         p_complaint_id IN NUMBER,
         p_new_status   IN VARCHAR2
     );
 
-    -- Return the total number of complaints for a student
+    -- How many complaints does this student have? Used by delete_student.
     FUNCTION get_complaint_count(
         p_student_id IN NUMBER
     ) RETURN NUMBER;
 
-    -- Print all pending complaints using an explicit cursor
+    -- Dump pending complaints to DBMS_OUTPUT. Mostly for debugging from SQL*Plus.
     PROCEDURE list_pending_complaints;
 
-    -- Delete a student and all of their complaints atomically
+    -- Nuke a student plus everything they've ever complained about.
     PROCEDURE delete_student(
         p_student_id IN NUMBER
     );
@@ -182,12 +173,9 @@ CREATE OR REPLACE PACKAGE hostel_pkg AS
 END hostel_pkg;
 /
 
--- ------------------------------------------------------------
--- PACKAGE BODY
--- ------------------------------------------------------------
+-- And here's the actual implementation.
 CREATE OR REPLACE PACKAGE BODY hostel_pkg AS
 
-    -- --------------------------------------------------------
     PROCEDURE add_student(
         p_name     IN VARCHAR2,
         p_roll_no  IN VARCHAR2,
@@ -222,7 +210,6 @@ CREATE OR REPLACE PACKAGE BODY hostel_pkg AS
             RAISE;
     END add_student;
 
-    -- --------------------------------------------------------
     PROCEDURE update_complaint_status(
         p_complaint_id IN NUMBER,
         p_new_status   IN VARCHAR2
@@ -261,7 +248,6 @@ CREATE OR REPLACE PACKAGE BODY hostel_pkg AS
             RAISE;
     END update_complaint_status;
 
-    -- --------------------------------------------------------
     FUNCTION get_complaint_count(
         p_student_id IN NUMBER
     ) RETURN NUMBER AS
@@ -276,7 +262,6 @@ CREATE OR REPLACE PACKAGE BODY hostel_pkg AS
             RETURN 0;
     END get_complaint_count;
 
-    -- --------------------------------------------------------
     PROCEDURE list_pending_complaints AS
         CURSOR c_pending IS
             SELECT c.id, s.name, s.roll_no, c.title, c.created_at
@@ -315,7 +300,6 @@ CREATE OR REPLACE PACKAGE BODY hostel_pkg AS
             RAISE;
     END list_pending_complaints;
 
-    -- --------------------------------------------------------
     PROCEDURE delete_student(
         p_student_id IN NUMBER
     ) AS
@@ -328,8 +312,9 @@ CREATE OR REPLACE PACKAGE BODY hostel_pkg AS
 
         v_complaint_count := get_complaint_count(p_student_id);
 
-        -- trg_cascade_delete_complaints trigger also handles this,
-        -- but explicit delete is kept for clarity.
+        -- The trigger trg_cascade_delete_complaints would handle this on its own,
+        -- but I'm leaving the explicit DELETE in so anyone reading this proc
+        -- can see what's actually happening without having to dig through triggers.
         DELETE FROM complaints WHERE student_id = p_student_id;
         DELETE FROM students   WHERE id         = p_student_id;
 

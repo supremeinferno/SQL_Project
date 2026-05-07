@@ -69,7 +69,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		fmt.Println("Admin login error:", err) // debug
+		fmt.Println("Admin login error:", err) // leaving this in while we sort out login flakiness
 	}
 
 	if role == "student" {
@@ -95,14 +95,14 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func adminDashboard(w http.ResponseWriter, r *http.Request) {
-	// Admin access check (STEP D2)
+	// Bounce anyone who isn't logged in as admin.
 	if _, err := r.Cookie("admin"); err != nil {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	// ------------------ FETCH COMPLAINTS ------------------
-	// Uses the admin_complaint_view (PL/SQL equivalent view defined in db.go)
+	// Pull complaints. We use the admin_complaint_view so the join with
+	// students is already done for us on the DB side.
 
 	cRows, err := db.Query(`
 		SELECT complaint_id, student_name, roll_no, room_no,
@@ -138,7 +138,8 @@ func adminDashboard(w http.ResponseWriter, r *http.Request) {
 		complaints = append(complaints, c)
 	}
 
-	// ------------------ FETCH STUDENTS ------------------
+	// Now grab the student list. If the admin typed something into the search
+	// box we filter by roll number, otherwise just show everyone.
 
 	rollSearch := r.URL.Query().Get("roll_search")
 
@@ -180,13 +181,14 @@ func adminDashboard(w http.ResponseWriter, r *http.Request) {
 		students = append(students, s)
 	}
 
-	// ------------------ SEND TO TEMPLATE ------------------
-
+	// Hand it all off to the template.
 	data := AdminPageData{
 		Complaints: complaints,
 		Students:   students,
 	}
 
+	// Old single-template version, kept around in case the layout split
+	// causes problems and we need to fall back quickly:
 	// tmpl := template.Must(template.ParseFiles("templates/admin.html"))
 	// tmpl.Execute(w, data)
 
@@ -243,6 +245,8 @@ func studentDashboard(w http.ResponseWriter, r *http.Request) {
 		complaints = append(complaints, c)
 	}
 
+	// Same fallback story as the admin handler - keeping the old version
+	// commented so we can revert quickly if something goes sideways.
 	// tmpl := template.Must(template.ParseFiles("templates/student.html"))
 	// tmpl.Execute(w, complaints)
 
@@ -311,13 +315,13 @@ func addComplaint(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/student", http.StatusSeeOther)
 }
 func deleteStudentComplaint(w http.ResponseWriter, r *http.Request) {
-	// Only allow POST requests
+	// POST-only - don't want this firing on a stray GET from a link prefetch.
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/student", http.StatusSeeOther)
 		return
 	}
 
-	// Ensure a student is logged in
+	// Need a logged-in student before we touch anything.
 	cookie, err := r.Cookie("student_id")
 	if err != nil {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -330,7 +334,8 @@ func deleteStudentComplaint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete complaint only if it belongs to the logged-in student
+	// The student_id check in the WHERE is on purpose - stops one student
+	// from deleting another student's complaint by guessing IDs.
 	_, err = db.Exec(
 		"DELETE FROM complaints WHERE id = :1 AND student_id = :2",
 		complaintID,
@@ -410,13 +415,13 @@ func updateComplaintStatus(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
 func deleteComplaint(w http.ResponseWriter, r *http.Request) {
-	// Allow only POST
+	// POST only.
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/admin", http.StatusSeeOther)
 		return
 	}
 
-	// Admin check (important)
+	// Don't skip this - without it, anyone with the URL can wipe complaints.
 	if _, err := r.Cookie("admin"); err != nil {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -433,13 +438,13 @@ func deleteComplaint(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
 func deleteStudent(w http.ResponseWriter, r *http.Request) {
-	// Only POST allowed
+	// POST only.
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/admin", http.StatusSeeOther)
 		return
 	}
 
-	// Admin check
+	// Admins only.
 	if _, err := r.Cookie("admin"); err != nil {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -447,7 +452,8 @@ func deleteStudent(w http.ResponseWriter, r *http.Request) {
 
 	studentID := r.FormValue("id")
 
-	// Use PL/SQL package procedure to delete student and cascade complaints
+	// Hand off to the PL/SQL proc - it deletes the student and their
+	// complaints in one transaction so we don't end up with orphan rows.
 	db.Exec("BEGIN hostel_pkg.delete_student(:1); END;", studentID)
 
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
@@ -501,7 +507,7 @@ func auditLogHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func exportStudentsCSV(w http.ResponseWriter, r *http.Request) {
-	// Admin check
+	// Admins only - this dumps the whole roster.
 	if _, err := r.Cookie("admin"); err != nil {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -524,7 +530,7 @@ func exportStudentsCSV(w http.ResponseWriter, r *http.Request) {
 	writer := csv.NewWriter(w)
 	defer writer.Flush()
 
-	// CSV header
+	// Header row first, then the rows.
 	writer.Write([]string{
 		"ID", "Name", "Roll No", "Room", "Username", "Password",
 	})
