@@ -192,7 +192,9 @@ func adminDashboard(w http.ResponseWriter, r *http.Request) {
 	// tmpl := template.Must(template.ParseFiles("templates/admin.html"))
 	// tmpl.Execute(w, data)
 
-	tmpl := template.Must(template.ParseFiles(
+	tmpl := template.Must(template.New("base.html").Funcs(template.FuncMap{
+		"inc": func(i int) int { return i + 1 },
+	}).ParseFiles(
 		"templates/base.html",
 		"templates/admin.html",
 	))
@@ -273,13 +275,16 @@ func addStudent(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
+	fmt.Printf("addStudent: name=%q roll=%q room=%q username=%q\n", name, roll, room, username)
+
 	_, err := db.Exec(
 		`BEGIN hostel_pkg.add_student(:1, :2, :3, :4, :5); END;`,
 		name, roll, room, username, password,
 	)
 
 	if err != nil {
-		w.Write([]byte("Error adding student"))
+		fmt.Println("addStudent error:", err)
+		w.Write([]byte("Error adding student: " + err.Error()))
 		return
 	}
 

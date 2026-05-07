@@ -96,22 +96,22 @@
         </thead>
 
         <tbody>
-        {{range .Complaints}}
+        {{range $i, $c := .Complaints}}
         <tr>
-            <td>{{.ID}}</td>
-            <td>{{.StudentName}}</td>
-            <td>{{.RollNo}}</td>
-            <td>{{.RoomNo}}</td>
-            <td>{{.Title}}</td>
-            <td>{{.Description}}</td>
+            <td>{{inc $i}}</td>
+            <td>{{$c.StudentName}}</td>
+            <td>{{$c.RollNo}}</td>
+            <td>{{$c.RoomNo}}</td>
+            <td>{{$c.Title}}</td>
+            <td>{{$c.Description}}</td>
             <td>
-                <span class="badge {{if eq .Status "Resolved"}}bg-success{{else}}bg-warning text-dark{{end}}">
-                    {{.Status}}
+                <span class="badge {{if eq $c.Status "Resolved"}}bg-success{{else}}bg-warning text-dark{{end}}">
+                    {{$c.Status}}
                 </span>
             </td>
             <td>
                 <form method="POST" action="/update-status" class="d-flex gap-1">
-                    <input type="hidden" name="id" value="{{.ID}}">
+                    <input type="hidden" name="id" value="{{$c.ID}}">
                     <select name="status" class="form-select form-select-sm">
                         <option>Pending</option>
                         <option>In Progress</option>
@@ -123,7 +123,7 @@
             <td>
                 <form method="POST" action="/delete-complaint"
                       onsubmit="return confirm('Delete this complaint?')">
-                    <input type="hidden" name="id" value="{{.ID}}">
+                    <input type="hidden" name="id" value="{{$c.ID}}">
                     <button class="btn btn-sm btn-danger">Delete</button>
                 </form>
             </td>
@@ -177,18 +177,18 @@
         </thead>
 
         <tbody>
-        {{range .Students}}
+        {{range $i, $s := .Students}}
         <tr>
-            <td>{{.ID}}</td>
-            <td>{{.Name}}</td>
-            <td>{{.RollNo}}</td>
-            <td>{{.RoomNo}}</td>
-            <td>{{.Username}}</td>
-            <td>{{.Password}}</td>
+            <td>{{inc $i}}</td>
+            <td>{{$s.Name}}</td>
+            <td>{{$s.RollNo}}</td>
+            <td>{{$s.RoomNo}}</td>
+            <td>{{$s.Username}}</td>
+            <td>{{$s.Password}}</td>
             <td>
                 <form method="POST" action="/delete-student"
                       onsubmit="return confirm('Delete student and complaints?')">
-                    <input type="hidden" name="id" value="{{.ID}}">
+                    <input type="hidden" name="id" value="{{$s.ID}}">
                     <button class="btn btn-sm btn-danger">Delete</button>
                 </form>
             </td>
