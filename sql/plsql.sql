@@ -2,7 +2,6 @@
 -- Has the usual stuff: sequences, tables, views, a few triggers
 -- and one package that wraps the procedures/functions we call
 -- from the Go side.
--- If you're running this on SQLite instead, use sqlite_plsql.sql.
 
 -- Sequences (Oracle doesn't have AUTOINCREMENT, so this is how we fake it)
 CREATE SEQUENCE admin_seq    START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
