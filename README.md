@@ -25,6 +25,7 @@ A hostel management web app with **Admin** and **Student** logins, featuring a f
 |----------|------------------------------------|
 | Language | Go                                 |
 | Database | Oracle Database Free 23ai (Docker) |
+| Image    | `gvenzl/oracle-free` (Docker Hub)  |
 | Driver   | `sijms/go-ora/v2`                  |
 | Frontend | HTML templates + Bootstrap 5       |
 
@@ -63,7 +64,7 @@ A hostel management web app with **Admin** and **Student** logins, featuring a f
 
 ## Before You Start — Install These
 
-You need three things installed before running the project:
+You need two things installed before running the project:
 
 ### 1. Go
 Download and install from https://go.dev/dl/
@@ -83,11 +84,7 @@ Verify it works:
 docker version
 ```
 
-### 3. Oracle Container Registry account
-The Oracle database image requires a free account to download.
-
-- Sign up at https://container-registry.oracle.com
-- After signing in, go to **Database → free** and click **Accept** on the license agreement
+> No Oracle account or registry login required — the database image is pulled from Docker Hub.
 
 > **Windows users:** Use **PowerShell** or **Git Bash** for all commands below. Command Prompt (cmd.exe) does not support the heredoc syntax (`<<`) used in some steps.
 
@@ -102,24 +99,16 @@ git clone https://github.com/supremeinferno/SQL_Project
 cd SQL_Project
 ```
 
-### Step 2 — Log in to the Oracle Container Registry
-
-```bash
-docker login container-registry.oracle.com
-```
-
-Enter the email and password of your Oracle account when prompted.
-
-### Step 3 — Start the Oracle database
+### Step 2 — Start the Oracle database
 
 ```bash
 docker run -d --name oracle-free \
   -p 1521:1521 \
   -e ORACLE_PASSWORD=Oracle123 \
-  container-registry.oracle.com/database/free:latest
+  gvenzl/oracle-free:latest
 ```
 
-> The image is ~2 GB — the first download will take a few minutes.
+> The image is ~2 GB — the first download will take a few minutes. No login required.
 
 Wait until the database is ready before continuing. Run this command and watch the output:
 
@@ -129,7 +118,7 @@ docker logs -f oracle-free
 
 When you see `DATABASE IS READY TO USE!`, press `Ctrl+C` to stop watching the logs.
 
-### Step 4 — Load the schema and PL/SQL objects
+### Step 3 — Load the schema and PL/SQL objects
 
 **Mac / Linux / Git Bash:**
 ```bash
@@ -141,7 +130,7 @@ docker exec -i oracle-free sqlplus system/Oracle123@FREEPDB1 @/dev/stdin < sql/p
 Get-Content sql/plsql.sql | docker exec -i oracle-free sqlplus system/Oracle123@FREEPDB1 @/dev/stdin
 ```
 
-### Step 5 — Create the admin account
+### Step 4 — Create the admin account
 
 **Mac / Linux / Git Bash:**
 ```bash
@@ -158,7 +147,7 @@ EOF
   docker exec -i oracle-free sqlplus system/Oracle123@FREEPDB1
 ```
 
-### Step 6 — Start the app
+### Step 5 — Start the app
 
 ```bash
 go run .
@@ -179,7 +168,7 @@ Open `http://localhost:8080` in your browser.
 
 ## Coming Back Later
 
-Steps 4 and 5 only need to be done **once**. Next time you want to run the project:
+Steps 3 and 4 only need to be done **once**. Next time you want to run the project:
 
 ```bash
 # Start the database container (if it's not already running)
@@ -221,8 +210,8 @@ go run .
 | `docker: permission denied` | On Linux, run with `sudo` or add your user to the `docker` group: `sudo usermod -aG docker $USER` (then log out and back in). |
 | Container exits immediately | Run `docker logs oracle-free` to see why. Most likely cause: not enough memory — Docker Desktop needs at least **4 GB RAM** allocated (check Docker Desktop → Settings → Resources). |
 | `go: command not found` | Go is not installed or not on your PATH. Install from https://go.dev/dl/ and restart your terminal. |
-| `ORA-01017: invalid username/password` | The database is still initializing. Wait for `DATABASE IS READY TO USE!` in `docker logs -f oracle-free`, then retry Step 4. |
-| `unauthorized` when pulling image | You haven't accepted the license on the Oracle Container Registry website. Sign in at https://container-registry.oracle.com → Database → free → Accept. |
+| `ORA-01017: invalid username/password` | The database is still initializing. Wait for `DATABASE IS READY TO USE!` in `docker logs -f oracle-free`, then retry Step 3. |
+| `docker: image not found` or pull error | Make sure Docker Desktop is running and you have internet access. The image pulls from Docker Hub — no account needed. |
 
 ---
 
