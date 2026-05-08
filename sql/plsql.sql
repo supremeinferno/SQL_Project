@@ -42,6 +42,7 @@ CREATE TABLE complaint_audit (
     old_status   VARCHAR2(20),
     new_status   VARCHAR2(20),
     changed_at   TIMESTAMP DEFAULT SYSTIMESTAMP
+    CONSTRAINT fk_complaint_audit FOREIGN KEY (complaint_id) REFERENCES complaints(id)
 );
 
 -- Views
