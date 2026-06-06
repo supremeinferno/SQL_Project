@@ -106,7 +106,7 @@ Install these before running the project:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/Harbani007/hostel_management_system.git
+git clone https://github.com/supremeinferno/hostel_management_system.git
 cd hostel_management_system
 ```
 
