@@ -1,9 +1,3 @@
--- Hostel management system - PL/SQL bits for Oracle.
--- Has the usual stuff: sequences, tables, views, a few triggers
--- and one package that wraps the procedures/functions we call
--- from the Go side.
-
--- Sequences (Oracle doesn't have AUTOINCREMENT, so this is how we fake it)
 CREATE SEQUENCE admin_seq    START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 CREATE SEQUENCE student_seq  START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 CREATE SEQUENCE complaint_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
@@ -17,7 +11,7 @@ CREATE TABLE admins (
 );
 
 CREATE TABLE students (
-    id       NUMBER DEFAULT student_seq.NEXTVAL PRIMARY KEY,
+    id       NUMBER DEFAULT student_seq.NEXTVAL PRfIMARY KEY,
     name     VARCHAR2(100),
     roll_no  VARCHAR2(50) UNIQUE,
     room_no  VARCHAR2(20),
@@ -42,7 +36,7 @@ CREATE TABLE complaint_audit (
     old_status   VARCHAR2(20),
     new_status   VARCHAR2(20),
     changed_at   TIMESTAMP DEFAULT SYSTIMESTAMP
-    CONSTRAINT fk_complaint_audit FOREIGN KEY (complaint_id) REFERENCES complaints(id)
+    -- CONSTRAINT fk_complaint_audit FOREIGN KEY (complaint_id) REFERENCES complaints(id)
 );
 
 -- Views

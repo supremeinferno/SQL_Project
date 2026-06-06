@@ -377,10 +377,6 @@ func updateStudentComplaintStatus(w http.ResponseWriter, r *http.Request) {
 		"UPDATE complaints SET status = :1 WHERE id = :2 AND student_id = :3",
 		status, complaintID, cookie.Value,
 	)
-	if err != nil {
-		w.Write([]byte("Error updating status"))
-		return
-	}
 
 	http.Redirect(w, r, "/student", http.StatusSeeOther)
 }
@@ -419,6 +415,7 @@ func updateComplaintStatus(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
+
 func deleteComplaint(w http.ResponseWriter, r *http.Request) {
 	// POST only.
 	if r.Method != http.MethodPost {
