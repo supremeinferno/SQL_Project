@@ -3,10 +3,13 @@ package main
 import (
 	"database/sql"
 	"encoding/csv"
+	"errors"
 	"html/template"
+	"log"
 	"net/http"
-	"fmt"
 	"strconv"
+	"strings"
+	"time"
 )
 
 type PageData struct {
@@ -23,6 +26,7 @@ type ComplaintView struct {
 	Description string
 	Status      string
 }
+
 type StudentView struct {
 	ID       int
 	Name     string
@@ -31,9 +35,99 @@ type StudentView struct {
 	Username string
 	Password string
 }
+
 type AdminPageData struct {
 	Complaints []ComplaintView
 	Students   []StudentView
+	RollSearch string
+}
+
+func templateFuncs() template.FuncMap {
+	return template.FuncMap{
+		"inc": func(i int) int { return i + 1 },
+	}
+}
+
+func renderPage(w http.ResponseWriter, title string, data interface{}, files ...string) {
+	allFiles := append([]string{"templates/base.html"}, files...)
+	tmpl, err := template.New("base.html").Funcs(templateFuncs()).ParseFiles(allFiles...)
+	if err != nil {
+		log.Printf("template parse error: %v", err)
+		http.Error(w, "Unable to load page", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tmpl.ExecuteTemplate(w, "base.html", PageData{Title: title, Data: data}); err != nil {
+		log.Printf("template execute error: %v", err)
+		http.Error(w, "Unable to render page", http.StatusInternalServerError)
+	}
+}
+
+func requireAdmin(w http.ResponseWriter, r *http.Request) bool {
+	cookie, err := r.Cookie("admin")
+	if err != nil || cookie.Value != "true" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return false
+	}
+	return true
+}
+
+func currentStudentID(w http.ResponseWriter, r *http.Request) (int, bool) {
+	cookie, err := r.Cookie("student_id")
+	if err != nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return 0, false
+	}
+
+	studentID, err := strconv.Atoi(cookie.Value)
+	if err != nil {
+		clearCookie(w, "student_id")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return 0, false
+	}
+
+	return studentID, true
+}
+
+func setSessionCookie(w http.ResponseWriter, name, value string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     name,
+		Value:    value,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func clearCookie(w http.ResponseWriter, name string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     name,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func nullString(value sql.NullString) string {
+	if value.Valid {
+		return value.String
+	}
+	return ""
+}
+
+func formatDBTime(value interface{}) string {
+	switch v := value.(type) {
+	case time.Time:
+		return v.Format("2006-01-02 15:04:05")
+	case string:
+		return v
+	case []byte:
+		return string(v)
+	default:
+		return ""
+	}
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -42,86 +136,73 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username := r.FormValue("username")
+	username := strings.TrimSpace(r.FormValue("username"))
 	password := r.FormValue("password")
 	role := r.FormValue("role")
 
-	fmt.Println("Username:", username)
-	fmt.Println("Password:", password)
-	fmt.Println("Role:", role)
-
-	if role == "admin" {
-	var id int
-
+	switch role {
+	case "admin":
+		var id int
 		err := db.QueryRow(
-			"SELECT id FROM admins WHERE username=:1 AND password=:2",
-			username, password,
+			"SELECT id FROM admins WHERE username = :1 AND password = :2",
+			username,
+			password,
 		).Scan(&id)
-
 		if err == nil {
-			http.SetCookie(w, &http.Cookie{
-				Name:  "admin",
-				Value: "true",
-				Path:  "/",
-			})
-
+			clearCookie(w, "student_id")
+			setSessionCookie(w, "admin", "true")
 			http.Redirect(w, r, "/admin", http.StatusSeeOther)
 			return
 		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("admin login query error: %v", err)
+		}
 
-		fmt.Println("Admin login error:", err) // leaving this in while we sort out login flakiness
-	}
-
-	if role == "student" {
+	case "student":
 		var id int
 		err := db.QueryRow(
-			"SELECT id FROM students WHERE username=:1 AND password=:2",
-			username, password,
+			"SELECT id FROM students WHERE username = :1 AND password = :2",
+			username,
+			password,
 		).Scan(&id)
-
 		if err == nil {
-			http.SetCookie(w, &http.Cookie{
-				Name:  "student_id",
-				Value: strconv.Itoa(id),
-				Path:  "/",
-			})
-
+			clearCookie(w, "admin")
+			setSessionCookie(w, "student_id", strconv.Itoa(id))
 			http.Redirect(w, r, "/student", http.StatusSeeOther)
 			return
 		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("student login query error: %v", err)
+		}
 	}
 
-	w.Write([]byte("Invalid login credentials"))
+	http.Error(w, "Invalid login credentials", http.StatusUnauthorized)
 }
 
 func adminDashboard(w http.ResponseWriter, r *http.Request) {
-	// Bounce anyone who isn't logged in as admin.
-	if _, err := r.Cookie("admin"); err != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+	if !requireAdmin(w, r) {
 		return
 	}
-
-	// Pull complaints. We use the admin_complaint_view so the join with
-	// students is already done for us on the DB side.
 
 	cRows, err := db.Query(`
 		SELECT complaint_id, student_name, roll_no, room_no,
 		       title, description, status
 		FROM admin_complaint_view
+		ORDER BY created_at DESC
 	`)
 	if err != nil {
-		w.Write([]byte("Error loading complaints"))
+		log.Printf("load complaints: %v", err)
+		http.Error(w, "Error loading complaints", http.StatusInternalServerError)
 		return
 	}
 	defer cRows.Close()
 
 	var complaints []ComplaintView
-
 	for cRows.Next() {
 		var c ComplaintView
 		var name, roll, room sql.NullString
 
-		cRows.Scan(
+		if err := cRows.Scan(
 			&c.ID,
 			&name,
 			&roll,
@@ -129,93 +210,84 @@ func adminDashboard(w http.ResponseWriter, r *http.Request) {
 			&c.Title,
 			&c.Description,
 			&c.Status,
-		)
+		); err != nil {
+			log.Printf("scan complaint: %v", err)
+			http.Error(w, "Error loading complaints", http.StatusInternalServerError)
+			return
+		}
 
-		c.StudentName = name.String
-		c.RollNo = roll.String
-		c.RoomNo = room.String
-
+		c.StudentName = nullString(name)
+		c.RollNo = nullString(roll)
+		c.RoomNo = nullString(room)
 		complaints = append(complaints, c)
 	}
-
-	// Now grab the student list. If the admin typed something into the search
-	// box we filter by roll number, otherwise just show everyone.
-
-	rollSearch := r.URL.Query().Get("roll_search")
-
-	var sRows *sql.Rows
-
-	if rollSearch != "" {
-		sRows, err = db.Query(`
-		SELECT id, name, roll_no, room_no, username, password
-		FROM students
-		WHERE roll_no LIKE :1
-	`, "%"+rollSearch+"%")
-	} else {
-		sRows, err = db.Query(`
-		SELECT id, name, roll_no, room_no, username, password
-		FROM students
-		ORDER BY id
-	`)
-	}
-
-	if err != nil {
-		w.Write([]byte("Error loading students"))
+	if err := cRows.Err(); err != nil {
+		log.Printf("iterate complaints: %v", err)
+		http.Error(w, "Error loading complaints", http.StatusInternalServerError)
 		return
 	}
 
+	rollSearch := strings.TrimSpace(r.URL.Query().Get("roll_search"))
+	var sRows *sql.Rows
+	if rollSearch != "" {
+		sRows, err = db.Query(`
+			SELECT id, name, roll_no, room_no, username, password
+			FROM students
+			WHERE UPPER(roll_no) LIKE UPPER(:1)
+			ORDER BY id
+		`, "%"+rollSearch+"%")
+	} else {
+		sRows, err = db.Query(`
+			SELECT id, name, roll_no, room_no, username, password
+			FROM students
+			ORDER BY id
+		`)
+	}
+	if err != nil {
+		log.Printf("load students: %v", err)
+		http.Error(w, "Error loading students", http.StatusInternalServerError)
+		return
+	}
 	defer sRows.Close()
 
 	var students []StudentView
-
 	for sRows.Next() {
 		var s StudentView
-		sRows.Scan(
+		if err := sRows.Scan(
 			&s.ID,
 			&s.Name,
 			&s.RollNo,
 			&s.RoomNo,
 			&s.Username,
 			&s.Password,
-		)
+		); err != nil {
+			log.Printf("scan student: %v", err)
+			http.Error(w, "Error loading students", http.StatusInternalServerError)
+			return
+		}
 		students = append(students, s)
 	}
-
-	// Hand it all off to the template.
-	data := AdminPageData{
-		Complaints: complaints,
-		Students:   students,
+	if err := sRows.Err(); err != nil {
+		log.Printf("iterate students: %v", err)
+		http.Error(w, "Error loading students", http.StatusInternalServerError)
+		return
 	}
 
-	// Old single-template version, kept around in case the layout split
-	// causes problems and we need to fall back quickly:
-	// tmpl := template.Must(template.ParseFiles("templates/admin.html"))
-	// tmpl.Execute(w, data)
-
-	tmpl := template.Must(template.New("base.html").Funcs(template.FuncMap{
-		"inc": func(i int) int { return i + 1 },
-	}).ParseFiles(
-		"templates/base.html",
-		"templates/admin.html",
-	))
-
-	tmpl.Execute(w, PageData{
-		Title: "Admin Dashboard",
-		Data:  data,
-	})
-
+	renderPage(w, "Admin Dashboard", AdminPageData{
+		Complaints: complaints,
+		Students:   students,
+		RollSearch: rollSearch,
+	}, "templates/admin.html")
 }
 
 func studentDashboard(w http.ResponseWriter, r *http.Request) {
-	_, err := r.Cookie("student_id")
-	cookie, err := r.Cookie("student_id")
 	if _, err := r.Cookie("admin"); err == nil {
 		http.Redirect(w, r, "/admin", http.StatusSeeOther)
 		return
 	}
 
-	if err != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+	studentID, ok := currentStudentID(w, r)
+	if !ok {
 		return
 	}
 
@@ -224,10 +296,10 @@ func studentDashboard(w http.ResponseWriter, r *http.Request) {
 		FROM complaints
 		WHERE student_id = :1
 		ORDER BY created_at DESC
-	`, cookie.Value)
-
+	`, studentID)
 	if err != nil {
-		w.Write([]byte("Error loading complaints"))
+		log.Printf("load student complaints: %v", err)
+		http.Error(w, "Error loading complaints", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -240,27 +312,22 @@ func studentDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var complaints []StudentComplaint
-
 	for rows.Next() {
 		var c StudentComplaint
-		rows.Scan(&c.ID, &c.Title, &c.Description, &c.Status)
+		if err := rows.Scan(&c.ID, &c.Title, &c.Description, &c.Status); err != nil {
+			log.Printf("scan student complaint: %v", err)
+			http.Error(w, "Error loading complaints", http.StatusInternalServerError)
+			return
+		}
 		complaints = append(complaints, c)
 	}
+	if err := rows.Err(); err != nil {
+		log.Printf("iterate student complaints: %v", err)
+		http.Error(w, "Error loading complaints", http.StatusInternalServerError)
+		return
+	}
 
-	// Same fallback story as the admin handler - keeping the old version
-	// commented so we can revert quickly if something goes sideways.
-	// tmpl := template.Must(template.ParseFiles("templates/student.html"))
-	// tmpl.Execute(w, complaints)
-
-	tmpl := template.Must(template.ParseFiles(
-		"templates/base.html",
-		"templates/student.html",
-	))
-
-	tmpl.Execute(w, PageData{
-		Title: "Student Dashboard",
-		Data:  complaints,
-	})
+	renderPage(w, "Student Dashboard", complaints, "templates/student.html")
 }
 
 func addStudent(w http.ResponseWriter, r *http.Request) {
@@ -268,134 +335,106 @@ func addStudent(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/admin", http.StatusSeeOther)
 		return
 	}
+	if !requireAdmin(w, r) {
+		return
+	}
 
-	name := r.FormValue("name")
-	roll := r.FormValue("roll")
-	room := r.FormValue("room")
-	username := r.FormValue("username")
+	name := strings.TrimSpace(r.FormValue("name"))
+	roll := strings.TrimSpace(r.FormValue("roll"))
+	room := strings.TrimSpace(r.FormValue("room"))
+	username := strings.TrimSpace(r.FormValue("username"))
 	password := r.FormValue("password")
 
-	fmt.Printf("addStudent: name=%q roll=%q room=%q username=%q\n", name, roll, room, username)
+	if name == "" || roll == "" || room == "" || username == "" || password == "" {
+		http.Error(w, "All student fields are required", http.StatusBadRequest)
+		return
+	}
 
 	_, err := db.Exec(
 		`BEGIN hostel_pkg.add_student(:1, :2, :3, :4, :5); END;`,
-		name, roll, room, username, password,
+		name,
+		roll,
+		room,
+		username,
+		password,
 	)
-
 	if err != nil {
-		fmt.Println("addStudent error:", err)
-		w.Write([]byte("Error adding student: " + err.Error()))
+		log.Printf("add student: %v", err)
+		http.Error(w, "Error adding student: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
+
 func addComplaint(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/student", http.StatusSeeOther)
 		return
 	}
 
-	cookie, err := r.Cookie("student_id")
-	if err != nil {
-		w.Write([]byte("Student not logged in"))
+	studentID, ok := currentStudentID(w, r)
+	if !ok {
 		return
 	}
 
-	studentID := cookie.Value
-	title := r.FormValue("title")
-	description := r.FormValue("description")
+	title := strings.TrimSpace(r.FormValue("title"))
+	description := strings.TrimSpace(r.FormValue("description"))
+	if title == "" || description == "" {
+		http.Error(w, "Complaint title and description are required", http.StatusBadRequest)
+		return
+	}
 
-	_, err = db.Exec(
+	_, err := db.Exec(
 		`INSERT INTO complaints (student_id, title, description)
 		 VALUES (:1, :2, :3)`,
-		studentID, title, description,
+		studentID,
+		title,
+		description,
 	)
-
 	if err != nil {
-		w.Write([]byte("Error submitting complaint"))
+		log.Printf("add complaint: %v", err)
+		http.Error(w, "Error submitting complaint", http.StatusInternalServerError)
 		return
 	}
 
 	http.Redirect(w, r, "/student", http.StatusSeeOther)
 }
+
 func deleteStudentComplaint(w http.ResponseWriter, r *http.Request) {
-	// POST-only - don't want this firing on a stray GET from a link prefetch.
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/student", http.StatusSeeOther)
 		return
 	}
 
-	// Need a logged-in student before we touch anything.
-	cookie, err := r.Cookie("student_id")
-	if err != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+	studentID, ok := currentStudentID(w, r)
+	if !ok {
 		return
 	}
 
-	complaintID := r.FormValue("id")
+	complaintID := strings.TrimSpace(r.FormValue("id"))
 	if complaintID == "" {
 		http.Redirect(w, r, "/student", http.StatusSeeOther)
 		return
 	}
 
-	// The student_id check in the WHERE is on purpose - stops one student
-	// from deleting another student's complaint by guessing IDs.
-	_, err = db.Exec(
+	_, err := db.Exec(
 		"DELETE FROM complaints WHERE id = :1 AND student_id = :2",
 		complaintID,
-		cookie.Value,
+		studentID,
 	)
 	if err != nil {
-		w.Write([]byte("Error deleting complaint"))
+		log.Printf("delete student complaint: %v", err)
+		http.Error(w, "Error deleting complaint", http.StatusInternalServerError)
 		return
 	}
-
-	http.Redirect(w, r, "/student", http.StatusSeeOther)
-}
-
-func updateStudentComplaintStatus(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/student", http.StatusSeeOther)
-		return
-	}
-
-	cookie, err := r.Cookie("student_id")
-	if err != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
-
-	complaintID := r.FormValue("id")
-	status := r.FormValue("status")
-	if complaintID == "" || status == "" {
-		http.Redirect(w, r, "/student", http.StatusSeeOther)
-		return
-	}
-
-	_, err = db.Exec(
-		"UPDATE complaints SET status = :1 WHERE id = :2 AND student_id = :3",
-		status, complaintID, cookie.Value,
-	)
 
 	http.Redirect(w, r, "/student", http.StatusSeeOther)
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{
-		Name:   "student_id",
-		Value:  "",
-		Path:   "/",
-		MaxAge: -1,
-	})
-
-	http.SetCookie(w, &http.Cookie{
-		Name:   "admin",
-		Value:  "",
-		Path:   "/",
-		MaxAge: -1,
-	})
-
+	clearCookie(w, "student_id")
+	clearCookie(w, "admin")
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -404,79 +443,99 @@ func updateComplaintStatus(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/admin", http.StatusSeeOther)
 		return
 	}
+	if !requireAdmin(w, r) {
+		return
+	}
 
-	id := r.FormValue("id")
-	status := r.FormValue("status")
+	id := strings.TrimSpace(r.FormValue("id"))
+	status := strings.TrimSpace(r.FormValue("status"))
+	if id == "" || status == "" {
+		http.Error(w, "Complaint ID and status are required", http.StatusBadRequest)
+		return
+	}
 
-	db.Exec(
+	if _, err := db.Exec(
 		"BEGIN hostel_pkg.update_complaint_status(:1, :2); END;",
-		id, status,
-	)
+		id,
+		status,
+	); err != nil {
+		log.Printf("update complaint status: %v", err)
+		http.Error(w, "Error updating complaint status: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
 
 func deleteComplaint(w http.ResponseWriter, r *http.Request) {
-	// POST only.
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/admin", http.StatusSeeOther)
 		return
 	}
-
-	// Don't skip this - without it, anyone with the URL can wipe complaints.
-	if _, err := r.Cookie("admin"); err != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+	if !requireAdmin(w, r) {
 		return
 	}
 
-	id := r.FormValue("id")
+	id := strings.TrimSpace(r.FormValue("id"))
+	if id == "" {
+		http.Redirect(w, r, "/admin", http.StatusSeeOther)
+		return
+	}
 
 	_, err := db.Exec("DELETE FROM complaints WHERE id = :1", id)
 	if err != nil {
-		w.Write([]byte("Error deleting complaint"))
+		log.Printf("delete complaint: %v", err)
+		http.Error(w, "Error deleting complaint", http.StatusInternalServerError)
 		return
 	}
 
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
+
 func deleteStudent(w http.ResponseWriter, r *http.Request) {
-	// POST only.
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/admin", http.StatusSeeOther)
 		return
 	}
-
-	// Admins only.
-	if _, err := r.Cookie("admin"); err != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+	if !requireAdmin(w, r) {
 		return
 	}
 
-	studentID := r.FormValue("id")
+	studentID := strings.TrimSpace(r.FormValue("id"))
+	if studentID == "" {
+		http.Redirect(w, r, "/admin", http.StatusSeeOther)
+		return
+	}
 
-	// Hand off to the PL/SQL proc - it deletes the student and their
-	// complaints in one transaction so we don't end up with orphan rows.
-	db.Exec("BEGIN hostel_pkg.delete_student(:1); END;", studentID)
+	if _, err := db.Exec("BEGIN hostel_pkg.delete_student(:1); END;", studentID); err != nil {
+		log.Printf("delete student: %v", err)
+		http.Error(w, "Error deleting student: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
+
 func auditLogHandler(w http.ResponseWriter, r *http.Request) {
-	if _, err := r.Cookie("admin"); err != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+	if !requireAdmin(w, r) {
 		return
 	}
 
 	rows, err := db.Query(`
-		SELECT a.id, a.complaint_id,
-		       COALESCE(s.name, 'Deleted Student') AS student_name,
-		       a.old_status, a.new_status, a.changed_at
+		SELECT a.id,
+		       a.complaint_id,
+		       COALESCE(a.student_name, s.name, 'Deleted or unavailable') AS student_name,
+		       a.old_status,
+		       a.new_status,
+		       a.changed_at
 		FROM complaint_audit a
 		LEFT JOIN complaints c ON a.complaint_id = c.id
 		LEFT JOIN students   s ON c.student_id   = s.id
 		ORDER BY a.changed_at DESC
 	`)
 	if err != nil {
-		w.Write([]byte("Error loading audit log"))
+		log.Printf("load audit log: %v", err)
+		http.Error(w, "Error loading audit log", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -493,25 +552,33 @@ func auditLogHandler(w http.ResponseWriter, r *http.Request) {
 	var entries []AuditEntry
 	for rows.Next() {
 		var e AuditEntry
-		rows.Scan(&e.ID, &e.ComplaintID, &e.StudentName,
-			&e.OldStatus, &e.NewStatus, &e.ChangedAt)
+		var changedAt interface{}
+		if err := rows.Scan(
+			&e.ID,
+			&e.ComplaintID,
+			&e.StudentName,
+			&e.OldStatus,
+			&e.NewStatus,
+			&changedAt,
+		); err != nil {
+			log.Printf("scan audit log: %v", err)
+			http.Error(w, "Error loading audit log", http.StatusInternalServerError)
+			return
+		}
+		e.ChangedAt = formatDBTime(changedAt)
 		entries = append(entries, e)
 	}
+	if err := rows.Err(); err != nil {
+		log.Printf("iterate audit log: %v", err)
+		http.Error(w, "Error loading audit log", http.StatusInternalServerError)
+		return
+	}
 
-	tmpl := template.Must(template.ParseFiles(
-		"templates/base.html",
-		"templates/audit.html",
-	))
-	tmpl.Execute(w, PageData{
-		Title: "Audit Log",
-		Data:  entries,
-	})
+	renderPage(w, "Audit Log", entries, "templates/audit.html")
 }
 
 func exportStudentsCSV(w http.ResponseWriter, r *http.Request) {
-	// Admins only - this dumps the whole roster.
-	if _, err := r.Cookie("admin"); err != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+	if !requireAdmin(w, r) {
 		return
 	}
 
@@ -521,7 +588,8 @@ func exportStudentsCSV(w http.ResponseWriter, r *http.Request) {
 		ORDER BY id
 	`)
 	if err != nil {
-		w.Write([]byte("Error exporting students"))
+		log.Printf("export students: %v", err)
+		http.Error(w, "Error exporting students", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -532,22 +600,31 @@ func exportStudentsCSV(w http.ResponseWriter, r *http.Request) {
 	writer := csv.NewWriter(w)
 	defer writer.Flush()
 
-	// Header row first, then the rows.
-	writer.Write([]string{
-		"ID", "Name", "Roll No", "Room", "Username", "Password",
-	})
+	if err := writer.Write([]string{"ID", "Name", "Roll No", "Room", "Username", "Password"}); err != nil {
+		log.Printf("write csv header: %v", err)
+		return
+	}
 
 	for rows.Next() {
 		var s StudentView
-		rows.Scan(&s.ID, &s.Name, &s.RollNo, &s.RoomNo, &s.Username, &s.Password)
+		if err := rows.Scan(&s.ID, &s.Name, &s.RollNo, &s.RoomNo, &s.Username, &s.Password); err != nil {
+			log.Printf("scan csv student: %v", err)
+			return
+		}
 
-		writer.Write([]string{
+		if err := writer.Write([]string{
 			strconv.Itoa(s.ID),
 			s.Name,
 			s.RollNo,
 			s.RoomNo,
 			s.Username,
 			s.Password,
-		})
+		}); err != nil {
+			log.Printf("write csv row: %v", err)
+			return
+		}
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("iterate csv students: %v", err)
 	}
 }

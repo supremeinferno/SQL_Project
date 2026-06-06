@@ -1,40 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Hostel Login</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Hostel Management System</title>
     <link href="/static/bootstrap.min.css" rel="stylesheet">
     <link href="/static/style.css" rel="stylesheet">
 </head>
 <body>
 
 <div class="container d-flex justify-content-center align-items-center full-height">
-    <div class="card login-card p-4 shadow" style="width:360px">
+    <div class="card login-card p-4 shadow" style="width: 380px;">
         <h4 class="text-center mb-1">Hostel Management Portal</h4>
         <p class="text-center text-muted mb-3">Login to continue</p>
 
         <form method="POST" action="/login">
-            <input class="form-control mb-3"
-                   name="username"
-                   placeholder="Username"
-                   required>
+            <label class="form-label" for="username">Username</label>
+            <input id="username" class="form-control mb-3" name="username" placeholder="Enter username" required>
 
-            <input type="password"
-                   class="form-control mb-3"
-                   name="password"
-                   placeholder="Password"
-                   required>
+            <label class="form-label" for="password">Password</label>
+            <input id="password" type="password" class="form-control mb-3" name="password" placeholder="Enter password" required>
 
-            <select class="form-select mb-4" name="role">
+            <label class="form-label" for="role">Role</label>
+            <select id="role" class="form-select mb-4" name="role" required>
                 <option value="admin">Admin</option>
                 <option value="student">Student</option>
             </select>
 
-            <button class="btn btn-primary w-100">Login</button>
+            <button class="btn btn-primary w-100" type="submit">Login</button>
         </form>
+
+        <p class="text-center text-muted small mt-3 mb-0">
+            Default admin: <code>admin</code> / <code>123</code>
+        </p>
     </div>
 </div>
 
 </body>
 </html>
-
-

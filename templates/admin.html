@@ -1,207 +1,160 @@
 {{define "content"}}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">Admin Dashboard</h3>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h3 class="mb-0">Admin Dashboard</h3>
+        <p class="text-muted mb-0">Manage students, complaints, and status audit history.</p>
+    </div>
     <a href="/audit-log" class="btn btn-outline-info btn-sm">Audit Log</a>
 </div>
 
-<!-- REGISTER STUDENT -->
 <div class="card p-4 mb-4">
     <h5 class="mb-3">Register Student</h5>
 
     <form method="POST" action="/add-student" class="row g-3">
-
-        <!-- Student Name (FULL WIDTH) -->
         <div class="col-md-12">
-            <input
-                type="text"
-                class="form-control"
-                name="name"
-                placeholder="Student Name"
-                required
-            >
+            <label class="form-label" for="name">Student Name</label>
+            <input id="name" type="text" class="form-control" name="name" placeholder="Student Name" required>
         </div>
 
-        <!-- Roll Number -->
         <div class="col-md-6">
-            <input
-                type="text"
-                class="form-control"
-                name="roll"
-                placeholder="Roll Number"
-                required
-            >
+            <label class="form-label" for="roll">Roll Number</label>
+            <input id="roll" type="text" class="form-control" name="roll" placeholder="Roll Number" required>
         </div>
 
-        <!-- Room Number -->
         <div class="col-md-6">
-            <input
-                type="text"
-                class="form-control"
-                name="room"
-                placeholder="Room Number"
-                required
-            >
+            <label class="form-label" for="room">Room Number</label>
+            <input id="room" type="text" class="form-control" name="room" placeholder="Room Number" required>
         </div>
 
-        <!-- Username -->
         <div class="col-md-6">
-            <input
-                type="text"
-                class="form-control"
-                name="username"
-                placeholder="Username"
-                required
-            >
+            <label class="form-label" for="student-username">Username</label>
+            <input id="student-username" type="text" class="form-control" name="username" placeholder="Username" required>
         </div>
 
-        <!-- Password -->
         <div class="col-md-6">
-            <input
-                type="password"
-                class="form-control"
-                name="password"
-                placeholder="Password"
-                required
-            >
+            <label class="form-label" for="student-password">Password</label>
+            <input id="student-password" type="password" class="form-control" name="password" placeholder="Password" required>
         </div>
 
-        <!-- Button -->
         <div class="col-12">
-            <button class="btn btn-primary">
-                Add Student
-            </button>
+            <button class="btn btn-primary" type="submit">Add Student</button>
         </div>
-
     </form>
 </div>
 
-
-<!-- COMPLAINTS -->
 <div class="card p-4 mb-4">
     <h5 class="mb-3">Complaints</h5>
 
-    <table class="table table-bordered table-hover">
-        <thead class="table-dark">
-        <tr>
-            <th>ID</th>
-            <th>Student</th>
-            <th>Roll</th>
-            <th>Room</th>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Status</th>
-            <th>Update</th>
-            <th>Delete</th>
-        </tr>
-        </thead>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Student</th>
+                <th>Roll</th>
+                <th>Room</th>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Update</th>
+                <th>Delete</th>
+            </tr>
+            </thead>
 
-        <tbody>
-        {{range $i, $c := .Complaints}}
-        <tr>
-            <td>{{inc $i}}</td>
-            <td>{{$c.StudentName}}</td>
-            <td>{{$c.RollNo}}</td>
-            <td>{{$c.RoomNo}}</td>
-            <td>{{$c.Title}}</td>
-            <td>{{$c.Description}}</td>
-            <td>
-                <span class="badge {{if eq $c.Status "Resolved"}}bg-success{{else}}bg-warning text-dark{{end}}">
-                    {{$c.Status}}
-                </span>
-            </td>
-            <td>
-                <form method="POST" action="/update-status" class="d-flex gap-1">
-                    <input type="hidden" name="id" value="{{$c.ID}}">
-                    <select name="status" class="form-select form-select-sm">
-                        <option>Pending</option>
-                        <option>In Progress</option>
-                        <option>Resolved</option>
-                    </select>
-                    <button class="btn btn-sm btn-primary">Update</button>
-                </form>
-            </td>
-            <td>
-                <form method="POST" action="/delete-complaint"
-                      onsubmit="return confirm('Delete this complaint?')">
-                    <input type="hidden" name="id" value="{{$c.ID}}">
-                    <button class="btn btn-sm btn-danger">Delete</button>
-                </form>
-            </td>
-        </tr>
-        {{else}}
-        <tr>
-            <td colspan="9" class="text-center text-muted">
-                No complaints found
-            </td>
-        </tr>
-        {{end}}
-        </tbody>
-    </table>
-</div>
-
-<!-- SEARCH STUDENT -->
-<div class="mt-2">
-    <a href="/admin" class="btn btn-outline-secondary btn-sm">
-        View All Students
-    </a>
+            <tbody>
+            {{range $i, $c := .Complaints}}
+            <tr>
+                <td>{{inc $i}}</td>
+                <td>{{$c.StudentName}}</td>
+                <td>{{$c.RollNo}}</td>
+                <td>{{$c.RoomNo}}</td>
+                <td>{{$c.Title}}</td>
+                <td>{{$c.Description}}</td>
+                <td>
+                    <span class="badge {{if eq $c.Status "Resolved"}}bg-success{{else if eq $c.Status "In Progress"}}bg-primary{{else}}bg-warning text-dark{{end}}">
+                        {{$c.Status}}
+                    </span>
+                </td>
+                <td>
+                    <form method="POST" action="/update-status" class="d-flex gap-1">
+                        <input type="hidden" name="id" value="{{$c.ID}}">
+                        <select name="status" class="form-select form-select-sm" aria-label="Complaint status">
+                            <option value="Pending" {{if eq $c.Status "Pending"}}selected{{end}}>Pending</option>
+                            <option value="In Progress" {{if eq $c.Status "In Progress"}}selected{{end}}>In Progress</option>
+                            <option value="Resolved" {{if eq $c.Status "Resolved"}}selected{{end}}>Resolved</option>
+                        </select>
+                        <button class="btn btn-sm btn-primary" type="submit">Update</button>
+                    </form>
+                </td>
+                <td>
+                    <form method="POST" action="/delete-complaint" onsubmit="return confirm('Delete this complaint?')">
+                        <input type="hidden" name="id" value="{{$c.ID}}">
+                        <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="9" class="text-center text-muted">No complaints found</td>
+            </tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <div class="card p-4 mb-4">
     <h5 class="mb-3">Search Student by Roll Number</h5>
-    <form method="GET" action="/admin" class="d-flex gap-2">
-        <input class="form-control" name="roll_search" placeholder="Enter Roll Number">
-        <button class="btn btn-secondary">Search</button>
+    <form method="GET" action="/admin" class="d-flex flex-wrap gap-2">
+        <input class="form-control flex-grow-1" name="roll_search" placeholder="Enter Roll Number" value="{{.RollSearch}}">
+        <button class="btn btn-secondary" type="submit">Search</button>
+        <a href="/admin" class="btn btn-outline-secondary">View All</a>
     </form>
 </div>
 
-<!-- ALL STUDENTS -->
 <div class="card p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5>All Students</h5>
-        <a href="/export-students" class="btn btn-success btn-sm">
-            Export CSV
-        </a>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h5 class="mb-0">All Students</h5>
+        <a href="/export-students" class="btn btn-success btn-sm">Export CSV</a>
     </div>
 
-    <table class="table table-bordered table-hover">
-        <thead class="table-dark">
-        <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Roll</th>
-            <th>Room</th>
-            <th>Username</th>
-            <th>Password</th>
-            <th>Delete</th>
-        </tr>
-        </thead>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Roll</th>
+                <th>Room</th>
+                <th>Username</th>
+                <th>Password</th>
+                <th>Delete</th>
+            </tr>
+            </thead>
 
-        <tbody>
-        {{range $i, $s := .Students}}
-        <tr>
-            <td>{{inc $i}}</td>
-            <td>{{$s.Name}}</td>
-            <td>{{$s.RollNo}}</td>
-            <td>{{$s.RoomNo}}</td>
-            <td>{{$s.Username}}</td>
-            <td>{{$s.Password}}</td>
-            <td>
-                <form method="POST" action="/delete-student"
-                      onsubmit="return confirm('Delete student and complaints?')">
-                    <input type="hidden" name="id" value="{{$s.ID}}">
-                    <button class="btn btn-sm btn-danger">Delete</button>
-                </form>
-            </td>
-        </tr>
-        {{else}}
-        <tr>
-            <td colspan="7" class="text-center text-muted">
-                No students found
-            </td>
-        </tr>
-        {{end}}
-        </tbody>
-    </table>
+            <tbody>
+            {{range $i, $s := .Students}}
+            <tr>
+                <td>{{inc $i}}</td>
+                <td>{{$s.Name}}</td>
+                <td>{{$s.RollNo}}</td>
+                <td>{{$s.RoomNo}}</td>
+                <td>{{$s.Username}}</td>
+                <td><code>{{$s.Password}}</code></td>
+                <td>
+                    <form method="POST" action="/delete-student" onsubmit="return confirm('Delete student and their complaints?')">
+                        <input type="hidden" name="id" value="{{$s.ID}}">
+                        <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="7" class="text-center text-muted">No students found</td>
+            </tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
 </div>
-
 {{end}}

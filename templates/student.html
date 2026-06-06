@@ -1,81 +1,53 @@
 {{define "content"}}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h3 class="mb-0">Student Dashboard</h3>
+        <p class="text-muted mb-0">Submit complaints and track their current status.</p>
+    </div>
+</div>
 
-<h3 class="mb-4">Student Dashboard</h3>
-
-<!-- SUBMIT COMPLAINT -->
 <div class="card p-4 mb-4">
     <h5 class="mb-3">Submit Complaint</h5>
 
     <form method="POST" action="/add-complaint">
         <div class="mb-3">
-            <input
-                type="text"
-                name="title"
-                class="form-control"
-                placeholder="Complaint Title"
-                required
-            >
+            <label class="form-label" for="title">Complaint Title</label>
+            <input id="title" type="text" name="title" class="form-control" placeholder="Complaint Title" required>
         </div>
 
         <div class="mb-3">
-            <textarea
-                name="description"
-                class="form-control"
-                rows="3"
-                placeholder="Describe your issue"
-                required
-            ></textarea>
+            <label class="form-label" for="description">Description</label>
+            <textarea id="description" name="description" class="form-control" rows="3" placeholder="Describe your issue" required></textarea>
         </div>
 
-        <button class="btn btn-primary">
-            Submit Complaint
-        </button>
+        <button class="btn btn-primary" type="submit">Submit Complaint</button>
     </form>
 </div>
 
-<!-- MY COMPLAINTS -->
 <div class="card p-4">
     <h5 class="mb-3">My Complaints</h5>
 
     {{range .}}
-    <div class="card mb-3 shadow-sm">
+    <div class="card mb-3 shadow-sm complaint-card">
         <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex flex-wrap justify-content-between gap-3">
                 <div>
-                    <h6 class="mb-0 fw-bold">{{.Title}}</h6>
-                    <p class="text-muted mb-0">
-                        {{.Description}}
-                    </p>
+                    <h6 class="mb-1 fw-bold">{{.Title}}</h6>
+                    <p class="text-muted mb-0">{{.Description}}</p>
                 </div>
 
-                <div class="text-end">
+                <div class="text-md-end">
                     {{if eq .Status "Resolved"}}
                         <span class="badge bg-success d-block mb-2">Resolved</span>
                     {{else if eq .Status "In Progress"}}
-                        <span class="badge bg-info d-block mb-2">In Progress</span>
+                        <span class="badge bg-primary d-block mb-2">In Progress</span>
                     {{else}}
                         <span class="badge bg-warning text-dark d-block mb-2">Pending</span>
                     {{end}}
 
-                    <form method="POST" action="/student/update-status" class="d-flex gap-1 align-items-center mb-2">
+                    <form method="POST" action="/student/delete-complaint" onsubmit="return confirm('Delete this complaint?');">
                         <input type="hidden" name="id" value="{{.ID}}">
-                        <select name="status" class="form-select form-select-sm" style="width: auto;">
-                            <option value="Pending" {{if eq .Status "Pending"}}selected{{end}}>Pending</option>
-                            <option value="In Progress" {{if eq .Status "In Progress"}}selected{{end}}>In Progress</option>
-                            <option value="Resolved" {{if eq .Status "Resolved"}}selected{{end}}>Resolved</option>
-                        </select>
-                        <button class="btn btn-sm btn-primary" type="submit">Update</button>
-                    </form>
-
-                    <form
-                        method="POST"
-                        action="/student/delete-complaint"
-                        onsubmit="return confirm('Are you sure you want to delete this complaint?');"
-                    >
-                        <input type="hidden" name="id" value="{{.ID}}">
-                        <button class="btn btn-sm btn-outline-danger" type="submit">
-                            Delete
-                        </button>
+                        <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
                     </form>
                 </div>
             </div>
@@ -84,7 +56,5 @@
     {{else}}
         <p class="text-muted">No complaints submitted yet.</p>
     {{end}}
-
 </div>
-
 {{end}}

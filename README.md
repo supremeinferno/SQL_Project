@@ -1,105 +1,116 @@
-# Hostel Management System (Go + Oracle PL/SQL)
+# Hostel Management System
 
-A hostel management web app with **Admin** and **Student** logins, featuring a full **PL/SQL implementation** (triggers, views, stored procedures, cursors, and exception handling) alongside the Go backend.
+A clean, beginner-friendly **Go + Oracle PL/SQL** web application for managing hostel students and complaints. The project includes separate **Admin** and **Student** flows, an Oracle-backed schema, triggers, views, stored procedures, cursors, and an automatic complaint-status audit log.
 
-> Oracle-only — the project runs against Oracle Database Free 23ai. There is no SQLite fallback.
+
+---
 
 ## Features
 
-- **Authentication** — separate admin and student logins
-- **Student dashboard** — submit, view, update status, and delete own complaints
-- **Admin dashboard**
-  - Register / delete students
-  - View and manage all complaints (via SQL view)
-  - Search students by roll number
-  - Export students to CSV
-  - **Audit Log** — every complaint status change is recorded automatically by a trigger
-- **PL/SQL layer**
-  - 5 Oracle triggers (validation, audit trail, cascade delete, admin protection)
-  - 2 SQL views (`admin_complaint_view`, `student_complaint_summary`)
-  - Oracle PL/SQL Package (`hostel_pkg`) with stored procedures, functions, cursors, and exception handling
+### Admin
+- Manage students (add/search/delete)
+- View and update complaints
+- Export student data (CSV)
+- View audit logs
+
+### Student
+- Submit complaints
+- Track complaint status
+- Delete own complaints
+
+### Database (Oracle PL/SQL)
+- Triggers for validation & audit logging
+- Views for simplified queries
+- Package with procedures, functions, and cursors
+---
+## Preview
+
+### Login Page
+![Login](screenshots/login.jpeg)
+
+### Admin Dashboard
+![Admin](screenshots/admin.jpeg)
+
+### Student Dashboard
+![Student](screenshots/student.jpeg)
 
 ## Tech Stack
 
-| Layer    | Technology                         |
-|----------|------------------------------------|
-| Language | Go                                 |
-| Database | Oracle Database Free 23ai (Docker) |
-| Image    | `gvenzl/oracle-free` (Docker Hub)  |
-| Driver   | `sijms/go-ora/v2`                  |
-| Frontend | HTML templates + Bootstrap 5       |
+| Layer | Technology |
+|---|---|
+| Backend | Go |
+| Database | Oracle Database |
+| Database image | `gvenzl/oracle-free` |
+| Oracle driver | `github.com/sijms/go-ora/v2` |
+| Frontend | HTML templates, Bootstrap 5, custom CSS |
+| Dev setup | Docker Desktop |
+
+---
+
+## Application Flow
+
+1. User logs in (Admin / Student)
+2. Role-based dashboard is loaded
+3. Actions trigger Go handlers
+4. Handlers interact with Oracle DB
+5. PL/SQL layer enforces rules (triggers, procedures)
+6. Response rendered via HTML templates
 
 ## Project Structure
 
 ```text
 .
-├── main.go                    # routes + server startup
-├── handlers.go                # HTTP handlers (calls PL/SQL procedures)
-├── db.go                      # Oracle connection setup
-├── go.mod / go.sum
+├── main.go                 # Server startup and route registration
+├── handlers.go             # HTTP handlers and template rendering
+├── db.go                   # Oracle connection setup
+├── go.mod / go.sum         # Go module files
 ├── sql/
-│   └── plsql.sql              # Oracle schema + PL/SQL implementation
+│   └── plsql.sql           # Oracle schema, triggers, views, package, seed admin
 ├── templates/
-│   ├── base.html
-│   ├── login.html
-│   ├── admin.html
-│   ├── student.html
-│   └── audit.html
-└── static/                    # CSS assets
+│   ├── base.html           # Shared layout
+│   ├── login.html          # Login page
+│   ├── admin.html          # Admin dashboard
+│   ├── student.html        # Student dashboard
+│   └── audit.html          # Audit log page
+└── static/
+    ├── bootstrap.min.css
+    └── style.css
 ```
-
-## PL/SQL Implementation
-
-| Construct | Details |
-|-----------|---------|
-| **Package** | `hostel_pkg` — specification + body |
-| **Procedures** | `add_student`, `update_complaint_status`, `delete_student`, `list_pending_complaints` |
-| **Function** | `get_complaint_count(student_id)` |
-| **Cursor** | Explicit cursor in `list_pending_complaints` |
-| **Exception handling** | Named exceptions, `NO_DATA_FOUND`, `OTHERS`, `ROLLBACK` |
-| **Triggers** | 5 triggers (audit, cascade delete, validation, admin protection) |
-| **Views** | `admin_complaint_view`, `student_complaint_summary` |
 
 ---
 
-## Before You Start — Install These
+## Prerequisites
 
-You need two things installed before running the project:
+Install these before running the project:
 
-### 1. Go
-Download and install from https://go.dev/dl/
+1. **Go 1.22 or newer**  
+   Download: https://go.dev/dl/
 
-Verify it works:
-```bash
-go version
-```
+   ```bash
+   go version
+   ```
 
-### 2. Docker Desktop
-Download and install from https://www.docker.com/products/docker-desktop/
+2. **Docker Desktop**  
+   Download: https://www.docker.com/products/docker-desktop/
 
-After installing, **open Docker Desktop and wait for it to start** (look for the whale icon in your taskbar/menu bar). Docker must be running before you use any `docker` commands.
+   Open Docker Desktop before running the database commands.
 
-Verify it works:
-```bash
-docker version
-```
-
-> No Oracle account or registry login required — the database image is pulled from Docker Hub.
-
-> **Windows users:** Use **PowerShell** or **Git Bash** for all commands below. Command Prompt (cmd.exe) does not support the heredoc syntax (`<<`) used in some steps.
+   ```bash
+   docker version
+   ```
 
 ---
 
 ## Run Locally
 
-### Step 1 — Clone the repository
+### 1. Clone the repository
 
 ```bash
-git clone https://github.com/supremeinferno/SQL_Project
-cd SQL_Project
+git clone https://github.com/Harbani007/hostel_management_system.git
+cd hostel_management_system
 ```
 
-### Step 2 — Start the Oracle database
+### 2. Start Oracle Database
 
 ```bash
 docker run -d --name oracle-free \
@@ -108,119 +119,150 @@ docker run -d --name oracle-free \
   gvenzl/oracle-free:latest
 ```
 
-> The image is ~2 GB — the first download will take a few minutes. No login required.
+The image is large, so the first pull can take a few minutes.
 
-Wait until the database is ready before continuing. Run this command and watch the output:
+Watch the logs until Oracle is ready:
 
 ```bash
 docker logs -f oracle-free
 ```
 
-When you see `DATABASE IS READY TO USE!`, press `Ctrl+C` to stop watching the logs.
+Continue when you see:
 
-### Step 3 — Load the schema and PL/SQL objects
+```text
+DATABASE IS READY TO USE!
+```
 
-**Mac / Linux / Git Bash:**
+Press `Ctrl + C` to stop watching logs.
+
+### 3. Load the schema and PL/SQL objects
+
+The SQL script creates all database objects and also seeds the default admin account.
+
+**macOS / Linux / Git Bash**
+
 ```bash
 docker exec -i oracle-free sqlplus system/Oracle123@FREEPDB1 @/dev/stdin < sql/plsql.sql
 ```
 
-**PowerShell (Windows):**
+**Windows PowerShell**
+
 ```powershell
 Get-Content sql/plsql.sql | docker exec -i oracle-free sqlplus system/Oracle123@FREEPDB1 @/dev/stdin
 ```
 
-### Step 4 — Create the admin account
-
-**Mac / Linux / Git Bash:**
-```bash
-docker exec -i oracle-free sqlplus system/Oracle123@FREEPDB1 <<'EOF'
-INSERT INTO admins (username, password) VALUES ('admin', '123');
-COMMIT;
-EXIT;
-EOF
-```
-
-**PowerShell (Windows):**
-```powershell
-"INSERT INTO admins (username, password) VALUES ('admin', '123');`nCOMMIT;`nEXIT;" |
-  docker exec -i oracle-free sqlplus system/Oracle123@FREEPDB1
-```
-
-### Step 5 — Start the app
+### 4. Start the Go app
 
 ```bash
 go run .
 ```
 
-Open `http://localhost:8080` in your browser.
+Open this in your browser:
+
+```text
+http://localhost:8080
+```
 
 ---
 
-## Login
+## Login Details
 
-| Role    | Username | Password |
-|---------|----------|----------|
-| Admin   | `admin`  | `123`    |
-| Student | set by admin during registration | set by admin |
+| Role | Username | Password |
+|---|---|---|
+| Admin | `admin` | `123` |
+| Student | Created by admin | Created by admin |
 
 ---
 
-## Coming Back Later
+## Useful Commands
 
-Steps 3 and 4 only need to be done **once**. Next time you want to run the project:
+Start the existing Oracle container:
 
 ```bash
-# Start the database container (if it's not already running)
 docker start oracle-free
-
-# Start the app
-go run .
 ```
 
-To stop the database when you're done:
+Stop the Oracle container:
+
 ```bash
 docker stop oracle-free
 ```
+
+Rebuild/run the Go app:
+
+```bash
+go run .
+```
+
+Build a local binary:
+
+```bash
+go build -o hostel-management .
+```
+
+The binary is ignored by Git and should not be committed.
 
 ---
 
 ## Custom Database Connection
 
-By default the app connects as `system` to `FREEPDB1` on `localhost:1521`. Set the `ORACLE_DSN` environment variable to override this:
+By default, the app connects to:
+
+```text
+oracle://system:Oracle123@localhost:1521/FREEPDB1
+```
+
+Override it with `ORACLE_DSN`.
+
+**macOS / Linux**
 
 ```bash
-# Mac / Linux
 export ORACLE_DSN="oracle://system:Oracle123@localhost:1521/FREEPDB1"
 go run .
+```
 
-# PowerShell (Windows)
+**Windows PowerShell**
+
+```powershell
 $env:ORACLE_DSN="oracle://system:Oracle123@localhost:1521/FREEPDB1"
 go run .
 ```
 
 ---
 
+## PL/SQL Highlights
+
+| PL/SQL concept | Where it is used |
+|---|---|
+| Sequences | Auto-generating IDs for admins, students, complaints, and audit rows |
+| Views | `admin_complaint_view`, `student_complaint_summary` |
+| Triggers | Status audit, status validation, cascade complaint cleanup, main admin protection |
+| Package | `hostel_pkg` |
+| Procedures | `add_student`, `update_complaint_status`, `delete_student`, `list_pending_complaints` |
+| Function | `get_complaint_count(student_id)` |
+| Cursor | Explicit cursor inside `list_pending_complaints` |
+| Exceptions | Duplicate student, invalid status, missing complaint/student, rollback handling |
+
+---
+
 ## Troubleshooting
 
 | Problem | Fix |
-|---------|-----|
-| `docker: command not found` | Docker Desktop is not installed or not running. Install it from https://www.docker.com/products/docker-desktop/ and make sure it is open. |
-| `port is already allocated` | Port 1521 is in use. Stop the conflicting service, or use a different port: `-p 1522:1521` and update `ORACLE_DSN` to match. |
-| `docker: permission denied` | On Linux, run with `sudo` or add your user to the `docker` group: `sudo usermod -aG docker $USER` (then log out and back in). |
-| Container exits immediately | Run `docker logs oracle-free` to see why. Most likely cause: not enough memory — Docker Desktop needs at least **4 GB RAM** allocated (check Docker Desktop → Settings → Resources). |
-| `go: command not found` | Go is not installed or not on your PATH. Install from https://go.dev/dl/ and restart your terminal. |
-| `ORA-01017: invalid username/password` | The database is still initializing. Wait for `DATABASE IS READY TO USE!` in `docker logs -f oracle-free`, then retry Step 3. |
-| `docker: image not found` or pull error | Make sure Docker Desktop is running and you have internet access. The image pulls from Docker Hub — no account needed. |
+|---|---|
+| `docker: command not found` | Install/open Docker Desktop and restart the terminal. |
+| `port is already allocated` | Another service is using port `1521`. Stop it, or map Oracle to another port and update `ORACLE_DSN`. |
+| Container exits immediately | Check logs using `docker logs oracle-free`. Docker may need more memory. Allocate at least 4 GB RAM. |
+| `ORA-01017: invalid username/password` | Oracle may still be starting. Wait for `DATABASE IS READY TO USE!`, then retry. |
+| `table or view does not exist` | Run `sql/plsql.sql` again. The script is safe to rerun and recreates the demo schema. |
+| `go: command not found` | Install Go and restart your terminal. |
 
 ---
 
 ## Notes
 
-- Passwords are stored in plain text — this is a learning/demo project.
-- Student operations (update/delete complaint) are scoped to their own `student_id` in SQL.
-- The Go backend calls Oracle PL/SQL package procedures (e.g., `hostel_pkg.add_student`) instead of raw SQL where applicable.
+- This is a learning/demo project, so passwords are stored in plain text.
+- Admin status updates are recorded automatically in `complaint_audit` by `trg_complaint_status_audit`.
+- The SQL script is intentionally rerunnable to make local development easier.
+- The project is structured to stay readable, practical, and easy to explain.
 
-## License
-
-For learning/demo use only.
+---

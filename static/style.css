@@ -5,8 +5,6 @@ body {
     margin: 0;
 }
 
-
-
 .full-height {
     min-height: 100vh;
 }
@@ -15,27 +13,33 @@ body {
     color: #6b7280 !important;
 }
 
-
 .navbar {
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
 
 .card {
     border: none;
-    border-radius: 12px;
+    border-radius: 14px;
     background: #ffffff;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
 }
-
 
 .login-card {
     animation: fadeIn 0.6s ease;
+}
+
+.complaint-card:hover {
+    transform: none;
 }
 
 @keyframes fadeIn {
@@ -48,8 +52,6 @@ body {
         transform: translateY(0);
     }
 }
-
-
 
 .btn {
     border-radius: 8px;
@@ -71,7 +73,6 @@ body {
     border: none;
 }
 
-
 .form-control,
 .form-select {
     border-radius: 8px;
@@ -81,9 +82,8 @@ body {
 .form-control:focus,
 .form-select:focus {
     border-color: #6366f1;
-    box-shadow: 0 0 0 2px rgba(99,102,241,0.2);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
-
 
 .table {
     background: white;
@@ -100,19 +100,16 @@ body {
     background: #f1f5f9;
 }
 
-
 .badge {
     padding: 6px 10px;
     border-radius: 999px;
     font-size: 0.75rem;
 }
 
-/* Student complaint cards */
 .card-body p {
     font-size: 0.95rem;
 }
 
-.badge {
-    font-size: 0.75rem;
-    padding: 6px 10px;
+code {
+    color: #4f46e5;
 }

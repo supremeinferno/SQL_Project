@@ -1,7 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>{{.Title}}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} | Hostel Management System</title>
     <link href="/static/bootstrap.min.css" rel="stylesheet">
     <link href="/static/style.css" rel="stylesheet">
 </head>
@@ -9,14 +11,19 @@
 
 <nav class="navbar navbar-dark bg-dark">
     <div class="container-fluid">
-        <span class="navbar-brand">Hostel Management System</span>
+        <a class="navbar-brand" href="/admin">Hostel Management System</a>
         <a href="/logout" class="btn btn-sm btn-danger">Logout</a>
     </div>
 </nav>
 
-<div class="container mt-4">
+<main class="container mt-4 mb-5">
     {{template "content" .Data}}
-</div>
+</main>
+
+<footer class="text-center text-muted small pb-4">
+    Built for learning by
+    <a href="https://github.com/Harbani007" target="_blank" rel="noopener">Harbani007</a>
+</footer>
 
 </body>
 </html>
